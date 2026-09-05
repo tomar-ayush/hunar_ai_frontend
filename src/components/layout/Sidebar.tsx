@@ -9,7 +9,7 @@ import {
   Sparkle,
   Flame
 } from 'lucide-react';
-import { useRecruiter } from '../../context/RecruiterContext';
+import { useRecruiter } from '../../context';
 import { Badge } from '../ui/Badge';
 
 export const Sidebar: React.FC = () => {

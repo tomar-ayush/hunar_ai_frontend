@@ -1,5 +1,5 @@
 import React from 'react';
-import { RecruiterProvider, useRecruiter } from './context/RecruiterContext';
+import { RecruiterProvider, useRecruiter } from './context';
 import { AppLayout } from './components/layout/AppLayout';
 import { DashboardView } from './views/DashboardView';
 import { SourcingBuilderView } from './views/SourcingBuilderView';

@@ -14,7 +14,7 @@ import {
   MessageSquare,
   Award
 } from 'lucide-react';
-import { useRecruiter } from '../context/RecruiterContext';
+import { useRecruiter } from '../context';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import type { CallTranscriptEntry } from '../types';

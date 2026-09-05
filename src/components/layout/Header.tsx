@@ -7,7 +7,7 @@ import {
   PhoneCall, 
   Command
 } from 'lucide-react';
-import { useRecruiter } from '../../context/RecruiterContext';
+import { useRecruiter } from '../../context';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 

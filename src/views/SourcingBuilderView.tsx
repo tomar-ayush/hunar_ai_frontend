@@ -17,7 +17,7 @@ import {
   Scan,
   Database
 } from 'lucide-react';
-import { useRecruiter } from '../context/RecruiterContext';
+import { useRecruiter } from '../context';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
