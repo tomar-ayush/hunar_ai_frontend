@@ -95,3 +95,60 @@ export interface ExtractedJobParameters {
   targetCompanies: string[];
   compensationRange: string;
 }
+
+export type HunarAgentStatus = 'ACTIVE' | 'INACTIVE' | 'DRAFT';
+
+export interface CreateAgentPayload {
+  name: string;
+  language: string;
+  voice_persona: string;
+  persona_name: string;
+  agent_prompt: string;
+  objective: string;
+  introduction: string;
+  result_prompt: string;
+  result_schema: Record<string, any>;
+  summary?: string;
+  logo?: string;
+  agent_code?: string;
+  required_variables?: string[];
+  custom_variables?: string[];
+}
+
+export interface UpdateAgentPayload extends Partial<CreateAgentPayload> {
+  status?: HunarAgentStatus;
+}
+
+export interface HunarAgentListResponse {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: HunarAgent[];
+}
+
+export interface HunarAgent {
+  id: string;
+  status: HunarAgentStatus;
+  name: string;
+  voice_persona: string;
+  persona_name: string;
+  voice_name: string;
+  summary: string;
+  logo: string;
+  language: string;
+  custom_variables: string[];
+  result_schema: Record<string, any>;
+  agent_code: string;
+  result_variables: string[];
+  required_variables: string[];
+  agent_prompt?: string;
+  objective?: string;
+  introduction?: string;
+  result_prompt?: string;
+  silence_response?: string;
+  conclusion?: string;
+  created_at?: string;
+  total_calls?: number;
+  successful_calls?: number;
+}
+

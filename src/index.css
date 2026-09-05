@@ -1,8 +1,10 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
 @layer base {
   :root {
     --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    --font-display: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     --bg-canvas: #fbfbfa;
     --bg-surface: #ffffff;
     --border-subtle: #f0f0ee;
@@ -36,6 +38,58 @@
     flex-direction: column;
     text-align: left;
     border: none;
+  }
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+/* Landing page entry animations — transform/opacity only */
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-rise {
+  opacity: 0;
+  animation: rise-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* Flow rail draws itself left-to-right on load */
+@keyframes draw-x {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.animate-draw-x {
+  transform: scaleX(0);
+  animation: draw-x 1s cubic-bezier(0.22, 1, 0.36, 1) 0.5s forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-rise,
+  .animate-draw-x {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+  html {
+    scroll-behavior: auto;
   }
 }
 

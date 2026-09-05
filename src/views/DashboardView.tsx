@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { 
   Users, 
   PhoneCall, 
@@ -10,7 +10,6 @@ import {
   Radio, 
   Layers, 
   ChevronRight,
-  RefreshCw,
   Flame,
   ArrowUpRight
 } from 'lucide-react';
@@ -21,15 +20,6 @@ import { Button } from '../components/ui/Button';
 
 export const DashboardView: React.FC = () => {
   const { metrics, candidates, navigateTo, setActiveCandidateId } = useRecruiter();
-  const [timeRange, setTimeRange] = useState<'today' | '7d' | '30d'>('7d');
-  const [isRefreshing, setIsRefreshing] = useState(false);
-
-  const handleRefresh = () => {
-    setIsRefreshing(true);
-    setTimeout(() => {
-      setIsRefreshing(false);
-    }, 600);
-  };
 
   const metricCards = [
     {
@@ -88,58 +78,14 @@ export const DashboardView: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
-          {/* Timeframe pill selector */}
-          <div className="inline-flex p-0.5 rounded-lg bg-[#f0f0ee] border border-[#e6e5e3] text-xs font-medium">
-            <button
-              onClick={() => setTimeRange('today')}
-              className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
-                timeRange === 'today'
-                  ? 'bg-white text-[#121212] shadow-xs'
-                  : 'text-[#6e6d69] hover:text-[#121212]'
-              }`}
-            >
-              Today
-            </button>
-            <button
-              onClick={() => setTimeRange('7d')}
-              className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
-                timeRange === '7d'
-                  ? 'bg-white text-[#121212] shadow-xs'
-                  : 'text-[#6e6d69] hover:text-[#121212]'
-              }`}
-            >
-              Last 7d
-            </button>
-            <button
-              onClick={() => setTimeRange('30d')}
-              className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
-                timeRange === '30d'
-                  ? 'bg-white text-[#121212] shadow-xs'
-                  : 'text-[#6e6d69] hover:text-[#121212]'
-              }`}
-            >
-              Last 30d
-            </button>
-          </div>
-
-          <button
-            onClick={handleRefresh}
-            title="Sync pipeline data"
-            className="w-8 h-8 rounded-lg border border-[#e6e5e3] bg-white flex items-center justify-center text-[#5a5957] hover:text-[#121212] hover:bg-[#f9f9f8] transition-colors cursor-pointer"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
-          </button>
-
-          <Button
-            size="sm"
-            variant="primary"
-            leftIcon={<Sparkles className="w-3.5 h-3.5 text-white" />}
-            onClick={() => navigateTo('/sourcing')}
-          >
-            Edit Campaign JD
-          </Button>
-        </div>
+        <Button
+          size="sm"
+          variant="primary"
+          leftIcon={<Sparkles className="w-3.5 h-3.5 text-white" />}
+          onClick={() => navigateTo('/sourcing')}
+        >
+          Edit Campaign JD
+        </Button>
       </div>
 
       {/* 1. High-Level Metrics Cards */}

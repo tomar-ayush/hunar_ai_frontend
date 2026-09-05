@@ -10,7 +10,8 @@ import {
   Radio, 
   ChevronRight, 
   Building2,
-  MapPin
+  MapPin,
+  Bot
 } from 'lucide-react';
 import { useRecruiter } from '../context';
 import { Card } from '../components/ui/Card';
@@ -27,7 +28,10 @@ export const PipelineView: React.FC = () => {
     clearCandidateSelection,
     initiateVoiceOutreach,
     setActiveCandidateId,
-    navigateTo
+    navigateTo,
+    agents,
+    activeAgentForOutreachId,
+    setActiveAgentForOutreachId
   } = useRecruiter();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -120,7 +124,32 @@ export const PipelineView: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* Active Voice Agent Selector */}
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#fbfbfa] border border-[#e6e5e3] text-xs">
+            <Bot className="w-3.5 h-3.5 text-[#4f46e5] shrink-0" />
+            <span className="text-[11px] text-[#8c8b88] hidden sm:inline">Voice Agent:</span>
+            <select
+              value={activeAgentForOutreachId}
+              onChange={e => setActiveAgentForOutreachId(e.target.value)}
+              className="bg-transparent text-[#121212] font-medium text-xs focus:outline-none cursor-pointer max-w-[150px] truncate"
+            >
+              {agents.map(ag => (
+                <option key={ag.id} value={ag.id}>
+                  {ag.name} ({ag.persona_name})
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={() => navigateTo('/agents')}
+              title="Manage and configure voice agents"
+              className="text-[10px] text-[#4f46e5] hover:underline font-mono ml-1"
+            >
+              Config
+            </button>
+          </div>
+
           <Button
             size="sm"
             variant="outline"
@@ -137,7 +166,7 @@ export const PipelineView: React.FC = () => {
             onClick={() => {
               const uncontacted = candidates.filter(c => c.callStatus === 'not_contacted').map(c => c.id);
               if (uncontacted.length > 0) {
-                initiateVoiceOutreach(uncontacted);
+                initiateVoiceOutreach(uncontacted, activeAgentForOutreachId);
               }
             }}
           >
@@ -362,7 +391,7 @@ export const PipelineView: React.FC = () => {
                           </button>
                         ) : (
                           <button
-                            onClick={() => initiateVoiceOutreach([candidate.id])}
+                            onClick={() => initiateVoiceOutreach([candidate.id], activeAgentForOutreachId)}
                             className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-[#e6e5e3] bg-white text-[#2d2c2a] hover:bg-[#f4f4f2] font-medium text-xs transition-colors cursor-pointer"
                           >
                             <PhoneCall className="w-3 h-3 text-[#4f46e5]" />
@@ -414,7 +443,7 @@ export const PipelineView: React.FC = () => {
               size="sm"
               variant="indigo"
               leftIcon={<PhoneCall className="w-3.5 h-3.5 fill-white text-white" />}
-              onClick={() => initiateVoiceOutreach(selectedCandidateIds)}
+              onClick={() => initiateVoiceOutreach(selectedCandidateIds, activeAgentForOutreachId)}
             >
               Initiate Hunar.AI Voice Outreach
             </Button>
