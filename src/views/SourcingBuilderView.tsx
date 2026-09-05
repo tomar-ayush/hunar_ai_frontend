@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { 
   Sparkles, 
-  Search, 
   Check, 
   X, 
   Plus, 
@@ -10,28 +9,34 @@ import {
   Layers, 
   Briefcase, 
   MapPin, 
-  ArrowRight, 
   RotateCcw,
   CheckCircle2,
   FileText,
   Scan,
-  Database
+  Database,
+  AlertCircle,
+  Volume2
 } from 'lucide-react';
 import { useRecruiter } from '../context';
+import { createJob } from '../api/hunarClient';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { mockJobDescriptionSample } from '../mock/mockData';
 
 export const SourcingBuilderView: React.FC = () => {
-  const { extractedParams, setExtractedParams, navigateTo } = useRecruiter();
+  const { extractedParams, setExtractedParams, navigateTo, refreshJobs } = useRecruiter();
 
-  // Multi-step workflow state: 1 = Input JD, 2 = AI Scanning Skeleton, 3 = Refinement & Query
+  // Multi-step workflow state: 1 = Input JD, 2 = AI Scanning Skeleton, 3 = Refinement & Create
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
   const [jobDescription, setJobDescription] = useState(mockJobDescriptionSample);
   const [newSkillInput, setNewSkillInput] = useState('');
   const [isQueryRunning, setIsQueryRunning] = useState(false);
   const [scanningProgress, setScanningProgress] = useState(0);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [callIntroduction, setCallIntroduction] = useState(
+    'Hi {callee_name}, I am calling from TalentAcq regarding your application for the role. Do you have a couple of minutes to talk?'
+  );
 
   // Suggested skills to add with 1-click
   const suggestedSkills = ['eBPF', 'Rust', 'Raft Consensus', 'Prometheus', 'CockroachDB', 'gRPC'];
@@ -71,12 +76,26 @@ export const SourcingBuilderView: React.FC = () => {
     }));
   };
 
-  const handleRunSearchQuery = () => {
+  const handleRunSearchQuery = async () => {
     setIsQueryRunning(true);
-    setTimeout(() => {
+    setCreateError(null);
+    try {
+      const created = await createJob({
+        title: extractedParams.targetJobTitle,
+        jd_text: jobDescription,
+        target_seniority_level: extractedParams.seniorityLevel,
+        target_location: extractedParams.locationPreference,
+        experience_required: `${extractedParams.experienceMin}+ years`,
+        required_skills: extractedParams.requiredSkills,
+        script: { introduction: callIntroduction },
+        sourcing_mode: 'auto'
+      });
+      await refreshJobs();
+      navigateTo(`/pipeline/${created.id}`);
+    } catch (err) {
+      setCreateError(err instanceof Error ? err.message : 'Job creation failed');
       setIsQueryRunning(false);
-      navigateTo('/pipeline');
-    }, 1200);
+    }
   };
 
   return (
@@ -269,11 +288,11 @@ export const SourcingBuilderView: React.FC = () => {
               <div className="flex items-center gap-2">
                 <Sliders className="w-4 h-4 text-[#121212]" />
                 <h2 className="text-sm font-semibold text-[#121212]">
-                  Step 3: Refine AI-Extracted Sourcing Parameters
+                  Step 3: Refine Parameters & Create the Job
                 </h2>
               </div>
               <p className="text-xs text-[#6e6d69] mt-0.5">
-                Verify the criteria below before issuing Apollo & People Data Labs candidate queries.
+                Verify the criteria below — this creates the job in your pipeline and starts candidate sourcing.
               </p>
             </div>
 
@@ -315,10 +334,13 @@ export const SourcingBuilderView: React.FC = () => {
                 }
                 className="w-full h-9 px-3 text-xs rounded-lg border border-[#e6e5e3] bg-white text-[#121212] focus:outline-none focus:border-[#121212]"
               >
-                <option value="Staff / Principal (L6+)">Staff / Principal (L6+)</option>
-                <option value="Lead / Senior Staff (L7)">Lead / Senior Staff (L7)</option>
-                <option value="Senior Engineer (L5)">Senior Engineer (L5)</option>
-                <option value="Director of Engineering">Director of Engineering</option>
+                <option value="Intern">Intern</option>
+                <option value="Junior">Junior</option>
+                <option value="Mid-level">Mid-level</option>
+                <option value="Senior">Senior</option>
+                <option value="Lead">Lead</option>
+                <option value="Staff">Staff</option>
+                <option value="Principal">Principal</option>
               </select>
             </div>
 
@@ -335,6 +357,26 @@ export const SourcingBuilderView: React.FC = () => {
                   setExtractedParams(prev => ({ ...prev, locationPreference: e.target.value }))
                 }
                 className="w-full h-9 px-3.5 text-xs rounded-lg border border-[#e6e5e3] bg-white text-[#121212] focus:outline-none focus:border-[#121212]"
+              />
+            </div>
+
+            {/* Call Introduction Script */}
+            <div className="space-y-1.5 md:col-span-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-[#2d2c2a] flex items-center gap-1.5">
+                  <Volume2 className="w-3.5 h-3.5 text-[#8c8b88]" />
+                  Call Introduction (opening line for the voice agent)
+                </label>
+                <span className="text-[11px] text-[#8c8b88]">
+                  {'{callee_name}'} is replaced with the candidate's name
+                </span>
+              </div>
+              <textarea
+                rows={2}
+                value={callIntroduction}
+                onChange={(e) => setCallIntroduction(e.target.value)}
+                placeholder="Hi {callee_name}, I am calling from TalentAcq regarding your application..."
+                className="w-full p-3 text-xs rounded-lg border border-[#e6e5e3] bg-white text-[#121212] placeholder-[#8c8b88] focus:outline-none focus:border-[#121212] transition-all leading-relaxed"
               />
             </div>
 
@@ -467,34 +509,42 @@ export const SourcingBuilderView: React.FC = () => {
             </div>
           </div>
 
-          {/* Action Footer: Run Search Query */}
-          <div className="pt-6 border-t border-[#f0f0ee] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-2 text-xs text-[#6e6d69]">
-              <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>
-                Search parameters will sync with Apollo.io and People Data Labs APIs.
-              </span>
-            </div>
+          {/* Action Footer: Create Job */}
+          <div className="pt-6 border-t border-[#f0f0ee] space-y-4">
+            {createError && (
+              <div className="p-3.5 rounded-xl bg-[#fdf2f2] border border-[#f8b4b4] text-[#9b1c1c] text-xs flex items-center gap-2.5">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{createError}</span>
+              </div>
+            )}
 
-            <div className="flex items-center gap-3">
-              <Button
-                variant="outline"
-                size="md"
-                onClick={() => setCurrentStep(1)}
-              >
-                Cancel
-              </Button>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-2 text-xs text-[#6e6d69]">
+                <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>
+                  Creates the job in your Hunar workspace — candidates are then scraped for it automatically.
+                </span>
+              </div>
 
-              <Button
-                variant="primary"
-                size="md"
-                isLoading={isQueryRunning}
-                leftIcon={<Search className="w-4 h-4 text-white" />}
-                rightIcon={<ArrowRight className="w-4 h-4 text-white" />}
-                onClick={handleRunSearchQuery}
-              >
-                Run Search Query
-              </Button>
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="outline"
+                  size="md"
+                  onClick={() => setCurrentStep(1)}
+                >
+                  Cancel
+                </Button>
+
+                <Button
+                  variant="primary"
+                  size="md"
+                  isLoading={isQueryRunning}
+                  leftIcon={<Plus className="w-4 h-4 text-white" />}
+                  onClick={handleRunSearchQuery}
+                >
+                  Create Job
+                </Button>
+              </div>
             </div>
           </div>
         </Card>

@@ -171,10 +171,10 @@ export const JobCandidatesView: React.FC = () => {
             </div>
             <div className="min-w-0 text-xs text-[#5a5957] space-y-1.5">
               <p className="line-clamp-2 leading-relaxed">{job.jd_text}</p>
-              {job.pass_criteria && (
-                <p className="text-[11px]">
-                  <span className="font-semibold text-[#2d2c2a]">Pass criteria: </span>
-                  {job.pass_criteria}
+              {job.script?.introduction && (
+                <p className="text-[11px] italic">
+                  <span className="font-semibold text-[#2d2c2a] not-italic">Call intro: </span>
+                  "{job.script.introduction}"
                 </p>
               )}
               {callingIds.length > 0 && (

@@ -1,14 +1,12 @@
 import React from 'react';
 import {
   Briefcase,
-  FileText,
   Plus,
   RefreshCw,
   AlertCircle,
   ChevronRight,
   Calendar,
-  Target,
-  HelpCircle,
+  MapPin,
   Clock,
 } from 'lucide-react';
 import { useRecruiter } from '../context';
@@ -165,31 +163,50 @@ export const PipelineView: React.FC = () => {
                   </span>
                   <span className="text-[#b0afa9]">•</span>
                   <span>{timeAgo(job.created_at)}</span>
-                  {job.script?.questions && job.script.questions.length > 0 && (
+                  {job.target_seniority_level && (
                     <>
                       <span className="text-[#b0afa9]">•</span>
-                      <span className="flex items-center gap-1 font-mono">
-                        <HelpCircle className="w-3 h-3" />
-                        {job.script.questions.length} screening questions
+                      <span>{job.target_seniority_level}</span>
+                    </>
+                  )}
+                  {job.target_location && (
+                    <>
+                      <span className="text-[#b0afa9]">•</span>
+                      <span className="flex items-center gap-1">
+                        <MapPin className="w-3 h-3" />
+                        {job.target_location}
                       </span>
+                    </>
+                  )}
+                  {job.experience_required && (
+                    <>
+                      <span className="text-[#b0afa9]">•</span>
+                      <span>{job.experience_required}</span>
                     </>
                   )}
                 </div>
 
-                {job.pass_criteria && (
-                  <div className="flex items-start gap-1.5 mt-3 p-2.5 rounded-lg bg-[#fbfbfa] border border-[#f0f0ee] max-w-2xl">
-                    <Target className="w-3.5 h-3.5 text-[#1b6b27] shrink-0 mt-0.5" />
-                    <span className="text-[11px] text-[#5a5957] leading-relaxed">
-                      <span className="font-semibold text-[#2d2c2a]">Pass criteria: </span>
-                      {job.pass_criteria}
-                    </span>
+                {job.required_skills && job.required_skills.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1.5 mt-3">
+                    {job.required_skills.slice(0, 6).map(skill => (
+                      <span
+                        key={skill}
+                        className="text-[10px] px-2 py-0.5 rounded bg-[#f4f4f2] text-[#484744] font-mono border border-[#e6e5e3]"
+                      >
+                        {skill}
+                      </span>
+                    ))}
+                    {job.required_skills.length > 6 && (
+                      <span className="text-[10px] text-[#8c8b88] font-mono">
+                        +{job.required_skills.length - 6} more
+                      </span>
+                    )}
                   </div>
                 )}
               </div>
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
-              <FileText className="w-4 h-4 text-[#8c8b88]" />
               <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#121212] text-white text-xs font-medium group-hover:bg-[#4f46e5] transition-colors">
                 View candidates
                 <ChevronRight className="w-3.5 h-3.5" />

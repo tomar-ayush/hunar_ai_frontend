@@ -1,4 +1,4 @@
-import type { HunarAgent, CreateAgentPayload, HunarAgentListResponse, HunarJob, JobCandidateRecord, CallInitiationResult } from '../types';
+import type { HunarAgent, CreateAgentPayload, HunarAgentListResponse, HunarJob, CreateJobPayload, JobCandidateRecord, CallInitiationResult } from '../types';
 
 /**
  * Client for the Hunar voice-agent API.
@@ -58,6 +58,14 @@ export function updateAgent(agentId: string, payload: CreateAgentPayload): Promi
 
 export function listJobs(): Promise<HunarJob[]> {
   return request<HunarJob[]>('/jobs');
+}
+
+export function createJob(payload: CreateJobPayload): Promise<HunarJob> {
+  return request<HunarJob>('/jobs', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
 }
 
 export function getJobCandidates(jobId: string): Promise<JobCandidateRecord[]> {

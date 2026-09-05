@@ -127,19 +127,31 @@ export interface HunarAgentListResponse {
 }
 
 export interface HunarJobScript {
-  opening_line?: string;
-  questions?: string[];
+  introduction?: string;
 }
 
 export interface HunarJob {
   id: string;
   title: string;
   jd_text: string;
+  target_seniority_level?: string | null;
+  target_location?: string | null;
+  experience_required?: string | null;
+  required_skills?: string[] | null;
   script?: HunarJobScript | null;
-  pass_criteria?: string | null;
   sourcing_mode?: string | null;
-  company_id?: string | null;
   created_at?: string;
+}
+
+export interface CreateJobPayload {
+  title: string;
+  jd_text: string;
+  target_seniority_level?: string | null;
+  target_location?: string | null;
+  experience_required?: string | null;
+  required_skills?: string[] | null;
+  script?: HunarJobScript | null;
+  sourcing_mode?: string;
 }
 
 export interface JobCandidateRecord {

@@ -10,13 +10,13 @@ Key requirements:
 - Strong communication, ownership, and ability to mentor engineering leads.`;
 
 export const mockExtractedParameters: ExtractedJobParameters = {
-  targetJobTitle: "Lead Distributed Systems Engineer",
-  seniorityLevel: "Staff / Principal (L6+)",
-  requiredSkills: ["Go (Golang)", "Kafka", "Distributed Systems", "Kubernetes", "gRPC", "PostgreSQL"],
-  optionalSkills: ["Rust", "CockroachDB", "Raft Consensus", "Prometheus", "eBPF"],
+  targetJobTitle: "Senior Fullstack Engineer",
+  seniorityLevel: "Senior",
+  requiredSkills: ["Python", "FastAPI", "React", "PostgreSQL", "Docker"],
+  optionalSkills: ["AWS", "Redis", "TypeScript", "Celery"],
   experienceMin: 1,
   experienceMax: 12,
-  locationPreference: "San Francisco, CA / Remote (US/Canada)",
+  locationPreference: "Bangalore, India",
   targetCompanies: ["Cloudflare", "Datadog", "Confluent", "Stripe", "Uber", "Cockroach Labs"],
   compensationRange: "$210,000 - $260,000 Base + Equity (0.15% - 0.35%)"
 };
