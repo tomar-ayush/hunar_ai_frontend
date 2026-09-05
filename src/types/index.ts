@@ -126,6 +126,37 @@ export interface HunarAgentListResponse {
   results: HunarAgent[];
 }
 
+export interface HunarJobScript {
+  opening_line?: string;
+  questions?: string[];
+}
+
+export interface HunarJob {
+  id: string;
+  title: string;
+  jd_text: string;
+  script?: HunarJobScript | null;
+  pass_criteria?: string | null;
+  sourcing_mode?: string | null;
+  company_id?: string | null;
+  created_at?: string;
+}
+
+export interface JobCandidateRecord {
+  id: string;
+  job_id: string;
+  name: string;
+  phone: string;
+  email: string;
+  source: string;
+  consent_status: string;
+  created_at?: string;
+}
+
+export interface CallInitiationResult {
+  [key: string]: any;
+}
+
 export interface HunarAgent {
   id: string;
   status: HunarAgentStatus;

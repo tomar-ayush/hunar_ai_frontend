@@ -157,7 +157,7 @@ export const DashboardView: React.FC = () => {
             onClick={() => navigateTo('/pipeline')}
             className="text-xs px-3.5 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white font-medium transition-colors flex items-center gap-1.5 cursor-pointer"
           >
-            <span>Review Pipeline ({candidates.length})</span>
+            <span>Review Jobs Pipeline</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
           <button

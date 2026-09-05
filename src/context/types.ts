@@ -3,7 +3,8 @@ import type {
   CampaignMetrics, 
   ExtractedJobParameters,
   HunarAgent,
-  CreateAgentPayload
+  CreateAgentPayload,
+  HunarJob
 } from '../types';
 
 export interface RecruiterContextType {
@@ -34,4 +35,10 @@ export interface RecruiterContextType {
   setActiveAgentForOutreachId: (id: string) => void;
   createAgent: (payload: CreateAgentPayload) => Promise<HunarAgent>;
   updateAgent: (id: string, payload: CreateAgentPayload) => Promise<HunarAgent>;
+
+  // Jobs — live backend state
+  jobs: HunarJob[];
+  jobsLoading: boolean;
+  jobsError: string | null;
+  refreshJobs: () => Promise<void>;
 }

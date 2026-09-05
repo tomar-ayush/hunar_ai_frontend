@@ -22,8 +22,14 @@ export const Header: React.FC = () => {
     }
     if (currentRoute === '/pipeline') {
       return [
-        { label: 'Candidate Pipeline', path: '/pipeline' },
-        { label: 'Candidate CRM', path: '/pipeline' },
+        { label: 'Pipeline', path: '/pipeline' },
+        { label: 'Jobs', path: '/pipeline' },
+      ];
+    }
+    if (currentRoute.startsWith('/pipeline/')) {
+      return [
+        { label: 'Pipeline', path: '/pipeline' },
+        { label: 'Job Candidates', path: currentRoute },
       ];
     }
     if (currentRoute === '/agents') {
@@ -100,15 +106,6 @@ export const Header: React.FC = () => {
             onClick={() => navigateTo('/pipeline')}
           >
             View Sourced Pipeline
-          </Button>
-        ) : currentRoute === '/pipeline' ? (
-          <Button
-            size="sm"
-            variant="primary"
-            leftIcon={<PhoneCall className="w-3.5 h-3.5" />}
-            onClick={() => navigateTo('/candidate/alex-johnson')}
-          >
-            View Latest Audit
           </Button>
         ) : (
           <Button

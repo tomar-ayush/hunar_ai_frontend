@@ -27,7 +27,7 @@ export const SourcingBuilderView: React.FC = () => {
   const { extractedParams, setExtractedParams, navigateTo } = useRecruiter();
 
   // Multi-step workflow state: 1 = Input JD, 2 = AI Scanning Skeleton, 3 = Refinement & Query
-  const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(3);
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
   const [jobDescription, setJobDescription] = useState(mockJobDescriptionSample);
   const [newSkillInput, setNewSkillInput] = useState('');
   const [isQueryRunning, setIsQueryRunning] = useState(false);
@@ -353,8 +353,8 @@ export const SourcingBuilderView: React.FC = () => {
                 <span className="text-xs font-mono text-[#8c8b88]">{extractedParams.experienceMin} yrs</span>
                 <input
                   type="range"
-                  min={3}
-                  max={15}
+                  min={1}
+                  max={12}
                   step={1}
                   value={extractedParams.experienceMin}
                   onChange={(e) => {
@@ -362,7 +362,7 @@ export const SourcingBuilderView: React.FC = () => {
                     setExtractedParams(prev => ({
                       ...prev,
                       experienceMin: min,
-                      experienceMax: Math.max(min + 3, prev.experienceMax)
+                      experienceMax: Math.min(12, Math.max(min + 3, prev.experienceMax))
                     }));
                   }}
                   className="w-full accent-[#121212] cursor-pointer"

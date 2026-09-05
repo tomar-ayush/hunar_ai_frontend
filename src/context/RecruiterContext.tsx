@@ -5,7 +5,8 @@ import type {
   CampaignMetrics, 
   ExtractedJobParameters,
   HunarAgent,
-  CreateAgentPayload
+  CreateAgentPayload,
+  HunarJob
 } from '../types';
 import { mockCandidates, mockCampaignMetrics, mockExtractedParameters } from '../mock/mockData';
 import * as hunarApi from '../api/hunarClient';
@@ -70,6 +71,27 @@ export const RecruiterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   useEffect(() => {
     refreshAgents();
   }, [refreshAgents]);
+
+  // Jobs — live from the backend
+  const [jobs, setJobs] = useState<HunarJob[]>([]);
+  const [jobsLoading, setJobsLoading] = useState<boolean>(true);
+  const [jobsError, setJobsError] = useState<string | null>(null);
+
+  const refreshJobs = useCallback(async () => {
+    setJobsLoading(true);
+    setJobsError(null);
+    try {
+      setJobs(await hunarApi.listJobs());
+    } catch (err) {
+      setJobsError(err instanceof Error ? err.message : 'Failed to load jobs');
+    } finally {
+      setJobsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshJobs();
+  }, [refreshJobs]);
 
   const navigateTo = (route: string) => {
     navigate(route);
@@ -202,7 +224,11 @@ export const RecruiterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         activeAgentForOutreachId,
         setActiveAgentForOutreachId,
         createAgent,
-        updateAgent
+        updateAgent,
+        jobs,
+        jobsLoading,
+        jobsError,
+        refreshJobs
       }}
     >
       {children}

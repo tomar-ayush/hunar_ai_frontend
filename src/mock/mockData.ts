@@ -14,7 +14,7 @@ export const mockExtractedParameters: ExtractedJobParameters = {
   seniorityLevel: "Staff / Principal (L6+)",
   requiredSkills: ["Go (Golang)", "Kafka", "Distributed Systems", "Kubernetes", "gRPC", "PostgreSQL"],
   optionalSkills: ["Rust", "CockroachDB", "Raft Consensus", "Prometheus", "eBPF"],
-  experienceMin: 7,
+  experienceMin: 1,
   experienceMax: 12,
   locationPreference: "San Francisco, CA / Remote (US/Canada)",
   targetCompanies: ["Cloudflare", "Datadog", "Confluent", "Stripe", "Uber", "Cockroach Labs"],

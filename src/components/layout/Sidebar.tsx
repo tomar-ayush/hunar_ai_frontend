@@ -3,7 +3,7 @@ import { LayoutDashboard, Sparkles, Users2, FileCheck2, Sparkle, Bot } from 'luc
 import { useRecruiter } from '../../context';
 
 export const Sidebar: React.FC = () => {
-  const { currentRoute, navigateTo, candidates, activeCandidate, agents, agentsTotalCount } = useRecruiter();
+  const { currentRoute, navigateTo, jobs, activeCandidate, agents, agentsTotalCount } = useRecruiter();
 
   const navItems = [
     {
@@ -22,7 +22,7 @@ export const Sidebar: React.FC = () => {
       id: '/pipeline',
       label: 'Pipeline',
       icon: Users2,
-      badge: `${candidates.length}`,
+      badge: `${jobs.length}`,
     },
     {
       id: '/agents',

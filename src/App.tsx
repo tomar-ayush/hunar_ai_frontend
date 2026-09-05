@@ -5,6 +5,7 @@ import { LandingView } from './views/LandingView';
 import { DashboardView } from './views/DashboardView';
 import { SourcingBuilderView } from './views/SourcingBuilderView';
 import { PipelineView } from './views/PipelineView';
+import { JobCandidatesView } from './views/JobCandidatesView';
 import { InterviewAuditView } from './views/InterviewAuditView';
 import { VoiceAgentsView } from './views/VoiceAgentsView';
 
@@ -35,6 +36,14 @@ export function App() {
             element={
               <AppLayout>
                 <PipelineView />
+              </AppLayout>
+            }
+          />
+          <Route
+            path="/pipeline/:jobId"
+            element={
+              <AppLayout>
+                <JobCandidatesView />
               </AppLayout>
             }
           />
