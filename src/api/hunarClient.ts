@@ -18,7 +18,7 @@ import type {
  * http://localhost:8000); set VITE_API_URL to point somewhere else.
  */
 const BASE_URL: string =
-  (import.meta.env?.VITE_API_URL as string | undefined) ?? '/api';
+  (import.meta.env?.VITE_API_URL as string | undefined) ?? '';
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
