@@ -15,10 +15,10 @@ import type {
  * Client for the Hunar voice-agent API.
  *
  * Defaults to the Vite proxy at `/api` (dev/preview proxy it to
- * http://localhost:8000); set VITE_HUNAR_API_URL to point somewhere else.
+ * http://localhost:8000); set VITE_API_URL to point somewhere else.
  */
 const BASE_URL: string =
-  (import.meta.env?.VITE_HUNAR_API_URL as string | undefined) ?? '/api';
+  (import.meta.env?.VITE_API_URL as string | undefined) ?? '/api';
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
