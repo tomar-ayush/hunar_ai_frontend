@@ -246,7 +246,7 @@ export const InterviewAuditView: React.FC = () => {
   // Unified candidate representation
   const isMock = Boolean(mockMatch);
   const candidateLog = callLog[candidateId];
-  const isRinging = candidateLog?.status === 'ringing' || callDetails?.status === 'INITIATED' || callDetails?.status === 'RINGING';
+  const isRinging = candidateLog?.status === 'ringing' || callDetails?.status === 'INITIATED' || callDetails?.status === 'RINGING' || callDetails?.status === 'IN_PROGRESS' || callDetails?.status === 'QUEUED';
   const isCalled = Boolean(candidateLog) || 
     (isMock && mockMatch?.callStatus === 'completed') || 
     Boolean(callDetails && (callDetails.status === 'COMPLETED' || callDetails.recording_url || callDetails.result));
@@ -1019,7 +1019,7 @@ export const InterviewAuditView: React.FC = () => {
           </Card>
 
           {/* AI Insights & Evaluation Card */}
-          {evaluation && (
+          {evaluation && !isRinging && (
             <Card className="p-5 space-y-5">
               <div className="flex items-center justify-between pb-3 border-b border-[#f0f0ee]">
                 <div className="flex items-center gap-2">
@@ -1206,273 +1206,283 @@ export const InterviewAuditView: React.FC = () => {
 
         {/* RIGHT PANEL: Audio Player & Synced Transcript (7 Cols) */}
         <div className="lg:col-span-7 space-y-4">
-          {/* Real Audio Element if recording URL is present */}
-          {recordingUrl && (
-            <audio
-              ref={audioRef}
-              src={recordingUrl}
-              preload="metadata"
-              onTimeUpdate={() => {
-                if (audioRef.current) {
-                  setCurrentTimeSec(Math.floor(audioRef.current.currentTime));
-                }
-              }}
-              onLoadedMetadata={() => {
-                if (audioRef.current && audioRef.current.duration) {
-                  setAudioDuration(Math.round(audioRef.current.duration));
-                }
-              }}
-              onEnded={() => {
-                setIsPlaying(false);
-                setCurrentTimeSec(0);
-              }}
-            />
-          )}
+          {!isRinging ? (
+            <>
+            {/* Real Audio Element if recording URL is present */}
+            {recordingUrl && (
+              <audio
+                ref={audioRef}
+                src={recordingUrl}
+                preload="metadata"
+                onTimeUpdate={() => {
+                  if (audioRef.current) {
+                    setCurrentTimeSec(Math.floor(audioRef.current.currentTime));
+                  }
+                }}
+                onLoadedMetadata={() => {
+                  if (audioRef.current && audioRef.current.duration) {
+                    setAudioDuration(Math.round(audioRef.current.duration));
+                  }
+                }}
+                onEnded={() => {
+                  setIsPlaying(false);
+                  setCurrentTimeSec(0);
+                }}
+              />
+            )}
 
-          {/* Modern Audio Player Container */}
-          <Card className="p-5 space-y-4 bg-white sticky top-18 z-10 shadow-xs border-[#e6e5e3]">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-[#121212] text-white flex items-center justify-center shadow-xs">
-                  <Bot className="w-4 h-4" />
+            {/* Modern Audio Player Container */}
+            <Card className="p-5 space-y-4 bg-white sticky top-18 z-10 shadow-xs border-[#e6e5e3]">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-[#121212] text-white flex items-center justify-center shadow-xs">
+                    <Bot className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-semibold text-[#121212]">
+                      Hunar.AI Voice Call Recording
+                    </h3>
+                    <span className="text-[11px] text-[#8c8b88]">
+                      Inbound screening · {callDetails ? `Recorded via ${callDetails.system_data?.persona_name || 'Hunar Voice Agent'} (${callDetails.language || 'ENGLISH'})` : (candidateLog ? `Recorded via ${candidateLog.agentName}` : 'Recorded Today')} (Audio codec: Opus 48kHz / WAV)
+                    </span>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-xs font-semibold text-[#121212]">
-                    Hunar.AI Voice Call Recording
-                  </h3>
-                  <span className="text-[11px] text-[#8c8b88]">
-                    Inbound screening · {callDetails ? `Recorded via ${callDetails.system_data?.persona_name || 'Hunar Voice Agent'} (${callDetails.language || 'ENGLISH'})` : (candidateLog ? `Recorded via ${candidateLog.agentName}` : 'Recorded Today')} (Audio codec: Opus 48kHz / WAV)
+
+                {/* Playback Speed Controls */}
+                <div className="inline-flex p-0.5 rounded-lg bg-[#f0f0ee] border border-[#e6e5e3] text-xs font-mono">
+                  {([1, 1.25, 1.5, 2] as const).map(speed => (
+                    <button
+                      key={speed}
+                      onClick={() => setPlaybackSpeed(speed)}
+                      className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${
+                        playbackSpeed === speed
+                          ? 'bg-white text-[#121212] font-semibold shadow-xs'
+                          : 'text-[#6e6d69] hover:text-[#121212]'
+                      }`}
+                    >
+                      {speed}x
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Audio Timeline & Waveform Simulation */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-mono text-[#5a5957] w-10 text-right">
+                    {formatTime(currentTimeSec)}
+                  </span>
+                  
+                  {/* Interactive Scrubber */}
+                  <input
+                    type="range"
+                    min={0}
+                    max={totalDurationSec}
+                    value={currentTimeSec}
+                    onChange={e => handleSeek(parseInt(e.target.value, 10))}
+                    className="flex-1 h-2 bg-[#f0f0ee] rounded-full accent-[#121212] cursor-pointer"
+                  />
+
+                  <span className="text-xs font-mono text-[#8c8b88] w-10">
+                    {formatTime(totalDurationSec)}
                   </span>
                 </div>
+
+                {/* Simulated Audio Waveform Bars */}
+                <div className="flex items-center justify-between gap-1 h-8 px-1 overflow-hidden">
+                  {Array.from({ length: 48 }).map((_, i) => {
+                    const barProgress = (i / 48) * totalDurationSec;
+                    const isPast = barProgress <= currentTimeSec;
+                    const height = 20 + Math.sin(i * 0.6) * 12 + ((i % 5) * 4);
+
+                    return (
+                      <div
+                        key={i}
+                        onClick={() => handleSeek(barProgress)}
+                        className={`flex-1 rounded-full transition-all duration-150 cursor-pointer ${
+                          isPast ? 'bg-[#121212]' : 'bg-[#e4e3e0] hover:bg-[#c8c7c3]'
+                        }`}
+                        style={{ height: `${height}%` }}
+                      />
+                    );
+                  })}
+                </div>
               </div>
 
-              {/* Playback Speed Controls */}
-              <div className="inline-flex p-0.5 rounded-lg bg-[#f0f0ee] border border-[#e6e5e3] text-xs font-mono">
-                {([1, 1.25, 1.5, 2] as const).map(speed => (
+              {/* Transport Buttons */}
+              <div className="flex items-center justify-between pt-1">
+                <div className="flex items-center gap-2">
                   <button
-                    key={speed}
-                    onClick={() => setPlaybackSpeed(speed)}
-                    className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${
-                      playbackSpeed === speed
-                        ? 'bg-white text-[#121212] font-semibold shadow-xs'
-                        : 'text-[#6e6d69] hover:text-[#121212]'
-                    }`}
+                    onClick={() => handleSeek(currentTimeSec - 10)}
+                    className="w-8 h-8 rounded-lg border border-[#e6e5e3] hover:bg-[#f4f4f2] text-[#5a5957] flex items-center justify-center cursor-pointer transition-colors"
+                    title="Rewind 10s"
                   >
-                    {speed}x
+                    <RotateCcw className="w-3.5 h-3.5" />
                   </button>
-                ))}
+
+                  <button
+                    onClick={togglePlay}
+                    className="w-10 h-10 rounded-xl bg-[#121212] hover:bg-[#282828] text-white flex items-center justify-center cursor-pointer shadow-xs active:scale-[0.98] transition-transform"
+                  >
+                    {isPlaying ? (
+                      <Pause className="w-4 h-4 fill-white" />
+                    ) : (
+                      <Play className="w-4 h-4 fill-white translate-x-0.5" />
+                    )}
+                  </button>
+
+                  <button
+                    onClick={() => handleSeek(currentTimeSec + 10)}
+                    className="w-8 h-8 rounded-lg border border-[#e6e5e3] hover:bg-[#f4f4f2] text-[#5a5957] flex items-center justify-center cursor-pointer transition-colors"
+                    title="Forward 10s"
+                  >
+                    <RotateCw className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2 text-xs text-[#8c8b88]">
+                  <Volume2 className="w-4 h-4 text-[#5a5957]" />
+                  <span className="font-mono">Sync Mode: Live Auto-Scroll</span>
+                </div>
               </div>
-            </div>
 
-            {/* Audio Timeline & Waveform Simulation */}
-            <div className="space-y-2">
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-mono text-[#5a5957] w-10 text-right">
-                  {formatTime(currentTimeSec)}
-                </span>
-                
-                {/* Interactive Scrubber */}
-                <input
-                  type="range"
-                  min={0}
-                  max={totalDurationSec}
-                  value={currentTimeSec}
-                  onChange={e => handleSeek(parseInt(e.target.value, 10))}
-                  className="flex-1 h-2 bg-[#f0f0ee] rounded-full accent-[#121212] cursor-pointer"
-                />
+              {/* Call Details Metadata Strip */}
+              {callDetails && (
+                <div className="flex flex-wrap items-center gap-2.5 pt-3 border-t border-[#f0f0ee] text-[11px] text-[#6e6d69]">
+                  <span className="font-mono">
+                    <span className="text-[#8c8b88]">Status:</span>{' '}
+                    <span className="text-emerald-700 font-semibold">{callDetails.status}</span>
+                  </span>
+                  <span>•</span>
+                  <span className="font-mono">
+                    <span className="text-[#8c8b88]">Answered:</span> {callDetails.answered_by || 'HUMAN'}
+                  </span>
+                  <span>•</span>
+                  <span className="font-mono">
+                    <span className="text-[#8c8b88]">Engagement:</span> {callDetails.engagement_status || 'ENGAGED'}
+                  </span>
+                  {callDetails.user_speech_duration && (
+                    <>
+                      <span>•</span>
+                      <span className="font-mono">
+                        <span className="text-[#8c8b88]">User Speech:</span> {callDetails.user_speech_duration}s
+                      </span>
+                    </>
+                  )}
+                  {callDetails.from_phone_number && (
+                    <>
+                      <span>•</span>
+                      <span className="font-mono">
+                        <span className="text-[#8c8b88]">Line:</span> {callDetails.from_phone_number}
+                      </span>
+                    </>
+                  )}
+                </div>
+              )}
+            </Card>
 
-                <span className="text-xs font-mono text-[#8c8b88] w-10">
-                  {formatTime(totalDurationSec)}
+            {/* Synchronized Transcript Chat-Style UI */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between px-1">
+                <div className="flex items-center gap-1.5">
+                  <MessageSquare className="w-4 h-4 text-[#121212]" />
+                  <h3 className="text-xs font-semibold text-[#121212] uppercase tracking-wider">
+                    Interactive Interview Transcript
+                  </h3>
+                </div>
+                <span className="text-[11px] text-[#8c8b88]">
+                  Click any timestamp to jump audio
                 </span>
               </div>
 
-              {/* Simulated Audio Waveform Bars */}
-              <div className="flex items-center justify-between gap-1 h-8 px-1 overflow-hidden">
-                {Array.from({ length: 48 }).map((_, i) => {
-                  const barProgress = (i / 48) * totalDurationSec;
-                  const isPast = barProgress <= currentTimeSec;
-                  const height = 20 + Math.sin(i * 0.6) * 12 + ((i % 5) * 4);
+              <div className="space-y-3">
+                {transcript.map((entry: CallTranscriptEntry) => {
+                  const isAI = entry.speaker === 'ai';
+                  const isCurrentlyActive = entry.id === activeTranscriptId;
 
                   return (
                     <div
-                      key={i}
-                      onClick={() => handleSeek(barProgress)}
-                      className={`flex-1 rounded-full transition-all duration-150 cursor-pointer ${
-                        isPast ? 'bg-[#121212]' : 'bg-[#e4e3e0] hover:bg-[#c8c7c3]'
+                      key={entry.id}
+                      className={`p-4 rounded-xl border transition-all duration-300 ${
+                        isCurrentlyActive
+                          ? 'border-[#121212] bg-[#fbfbfa] shadow-sm ring-1 ring-[#121212]'
+                          : isAI
+                          ? 'border-[#e6e5e3] bg-[#fdfdfc]'
+                          : 'border-[#e6e5e3] bg-white'
                       }`}
-                      style={{ height: `${height}%` }}
-                    />
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          {isAI ? (
+                            <div className="w-5 h-5 rounded-full bg-[#121212] text-white flex items-center justify-center text-[10px] font-bold">
+                              AI
+                            </div>
+                          ) : candidateAvatar ? (
+                            <img
+                              src={candidateAvatar}
+                              alt={candidateName}
+                              className="w-5 h-5 rounded-full object-cover border border-[#e6e5e3]"
+                            />
+                          ) : (
+                            <div className="w-5 h-5 rounded-full bg-[#f4f4f2] border border-[#e6e5e3] flex items-center justify-center text-[9px] font-semibold text-[#5a5957]">
+                              {initialsOf(candidateName)}
+                            </div>
+                          )}
+                          <span className="text-xs font-semibold text-[#121212]">
+                            {isAI ? 'Hunar AI Voice Recruiter' : candidateName}
+                          </span>
+
+                          {entry.keyTopic && (
+                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#f4f4f2] text-[#6e6d69]">
+                              {entry.keyTopic}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Clickable timestamp with audio jump */}
+                        <button
+                          onClick={() => handleJumpToTranscript(entry.timestampSec)}
+                          className={`text-[11px] font-mono px-2 py-0.5 rounded transition-colors flex items-center gap-1 cursor-pointer ${
+                            isCurrentlyActive
+                              ? 'bg-[#121212] text-white font-bold'
+                              : 'text-[#8c8b88] hover:text-[#121212] hover:bg-[#f0f0ee]'
+                          }`}
+                        >
+                          <Play className="w-2.5 h-2.5" />
+                          <span>{entry.timestamp}</span>
+                        </button>
+                      </div>
+
+                      <p className="text-xs text-[#2d2c2a] leading-relaxed pl-7">
+                        {entry.text}
+                      </p>
+
+                      {/* Keywords Tagging */}
+                      {entry.highlightKeywords && (
+                        <div className="mt-2.5 pl-7 flex flex-wrap gap-1">
+                          {entry.highlightKeywords.map(kw => (
+                            <span
+                              key={kw}
+                              className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#f5f3ff] text-[#4f46e5] border border-[#e0e7ff]"
+                            >
+                              #{kw}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   );
                 })}
               </div>
             </div>
 
-            {/* Transport Buttons */}
-            <div className="flex items-center justify-between pt-1">
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handleSeek(currentTimeSec - 10)}
-                  className="w-8 h-8 rounded-lg border border-[#e6e5e3] hover:bg-[#f4f4f2] text-[#5a5957] flex items-center justify-center cursor-pointer transition-colors"
-                  title="Rewind 10s"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                </button>
-
-                <button
-                  onClick={togglePlay}
-                  className="w-10 h-10 rounded-xl bg-[#121212] hover:bg-[#282828] text-white flex items-center justify-center cursor-pointer shadow-xs active:scale-[0.98] transition-transform"
-                >
-                  {isPlaying ? (
-                    <Pause className="w-4 h-4 fill-white" />
-                  ) : (
-                    <Play className="w-4 h-4 fill-white translate-x-0.5" />
-                  )}
-                </button>
-
-                <button
-                  onClick={() => handleSeek(currentTimeSec + 10)}
-                  className="w-8 h-8 rounded-lg border border-[#e6e5e3] hover:bg-[#f4f4f2] text-[#5a5957] flex items-center justify-center cursor-pointer transition-colors"
-                  title="Forward 10s"
-                >
-                  <RotateCw className="w-3.5 h-3.5" />
-                </button>
-              </div>
-
-              <div className="flex items-center gap-2 text-xs text-[#8c8b88]">
-                <Volume2 className="w-4 h-4 text-[#5a5957]" />
-                <span className="font-mono">Sync Mode: Live Auto-Scroll</span>
-              </div>
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-[500px] border border-dashed border-[#e6e5e3] rounded-xl bg-[#fbfbfa] text-[#8c8b88] space-y-3">
+              <div className="w-8 h-8 rounded-full border-2 border-[#1b6b27] border-t-transparent animate-spin" />
+              <span className="text-xs font-mono">Audio & Transcript will be available after the call completes...</span>
             </div>
-
-            {/* Call Details Metadata Strip */}
-            {callDetails && (
-              <div className="flex flex-wrap items-center gap-2.5 pt-3 border-t border-[#f0f0ee] text-[11px] text-[#6e6d69]">
-                <span className="font-mono">
-                  <span className="text-[#8c8b88]">Status:</span>{' '}
-                  <span className="text-emerald-700 font-semibold">{callDetails.status}</span>
-                </span>
-                <span>•</span>
-                <span className="font-mono">
-                  <span className="text-[#8c8b88]">Answered:</span> {callDetails.answered_by || 'HUMAN'}
-                </span>
-                <span>•</span>
-                <span className="font-mono">
-                  <span className="text-[#8c8b88]">Engagement:</span> {callDetails.engagement_status || 'ENGAGED'}
-                </span>
-                {callDetails.user_speech_duration && (
-                  <>
-                    <span>•</span>
-                    <span className="font-mono">
-                      <span className="text-[#8c8b88]">User Speech:</span> {callDetails.user_speech_duration}s
-                    </span>
-                  </>
-                )}
-                {callDetails.from_phone_number && (
-                  <>
-                    <span>•</span>
-                    <span className="font-mono">
-                      <span className="text-[#8c8b88]">Line:</span> {callDetails.from_phone_number}
-                    </span>
-                  </>
-                )}
-              </div>
-            )}
-          </Card>
-
-          {/* Synchronized Transcript Chat-Style UI */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between px-1">
-              <div className="flex items-center gap-1.5">
-                <MessageSquare className="w-4 h-4 text-[#121212]" />
-                <h3 className="text-xs font-semibold text-[#121212] uppercase tracking-wider">
-                  Interactive Interview Transcript
-                </h3>
-              </div>
-              <span className="text-[11px] text-[#8c8b88]">
-                Click any timestamp to jump audio
-              </span>
-            </div>
-
-            <div className="space-y-3">
-              {transcript.map((entry: CallTranscriptEntry) => {
-                const isAI = entry.speaker === 'ai';
-                const isCurrentlyActive = entry.id === activeTranscriptId;
-
-                return (
-                  <div
-                    key={entry.id}
-                    className={`p-4 rounded-xl border transition-all duration-300 ${
-                      isCurrentlyActive
-                        ? 'border-[#121212] bg-[#fbfbfa] shadow-sm ring-1 ring-[#121212]'
-                        : isAI
-                        ? 'border-[#e6e5e3] bg-[#fdfdfc]'
-                        : 'border-[#e6e5e3] bg-white'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        {isAI ? (
-                          <div className="w-5 h-5 rounded-full bg-[#121212] text-white flex items-center justify-center text-[10px] font-bold">
-                            AI
-                          </div>
-                        ) : candidateAvatar ? (
-                          <img
-                            src={candidateAvatar}
-                            alt={candidateName}
-                            className="w-5 h-5 rounded-full object-cover border border-[#e6e5e3]"
-                          />
-                        ) : (
-                          <div className="w-5 h-5 rounded-full bg-[#f4f4f2] border border-[#e6e5e3] flex items-center justify-center text-[9px] font-semibold text-[#5a5957]">
-                            {initialsOf(candidateName)}
-                          </div>
-                        )}
-                        <span className="text-xs font-semibold text-[#121212]">
-                          {isAI ? 'Hunar AI Voice Recruiter' : candidateName}
-                        </span>
-
-                        {entry.keyTopic && (
-                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#f4f4f2] text-[#6e6d69]">
-                            {entry.keyTopic}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Clickable timestamp with audio jump */}
-                      <button
-                        onClick={() => handleJumpToTranscript(entry.timestampSec)}
-                        className={`text-[11px] font-mono px-2 py-0.5 rounded transition-colors flex items-center gap-1 cursor-pointer ${
-                          isCurrentlyActive
-                            ? 'bg-[#121212] text-white font-bold'
-                            : 'text-[#8c8b88] hover:text-[#121212] hover:bg-[#f0f0ee]'
-                        }`}
-                      >
-                        <Play className="w-2.5 h-2.5" />
-                        <span>{entry.timestamp}</span>
-                      </button>
-                    </div>
-
-                    <p className="text-xs text-[#2d2c2a] leading-relaxed pl-7">
-                      {entry.text}
-                    </p>
-
-                    {/* Keywords Tagging */}
-                    {entry.highlightKeywords && (
-                      <div className="mt-2.5 pl-7 flex flex-wrap gap-1">
-                        {entry.highlightKeywords.map(kw => (
-                          <span
-                            key={kw}
-                            className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#f5f3ff] text-[#4f46e5] border border-[#e0e7ff]"
-                          >
-                            #{kw}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

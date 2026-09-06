@@ -2,10 +2,9 @@ import React from 'react';
 import { ChevronRight, Sparkles, PhoneCall } from 'lucide-react';
 import { useRecruiter } from '../../context';
 import { Button } from '../ui/Button';
-import { Badge } from '../ui/Badge';
 
 export const Header: React.FC = () => {
-  const { currentRoute, navigateTo, metrics, activeCandidate, isCallingSimulated } = useRecruiter();
+  const { currentRoute, navigateTo, activeCandidate } = useRecruiter();
 
   const getBreadcrumbs = () => {
     if (currentRoute === '/dashboard') {
@@ -76,18 +75,6 @@ export const Header: React.FC = () => {
 
       {/* Right: Live Call Status & CTA */}
       <div className="flex items-center gap-3">
-        {/* Live Call Telemetry Badge */}
-        {isCallingSimulated ? (
-          <Badge variant="warning" dot className="animate-pulse font-mono">
-            Dialing Candidate Lines...
-          </Badge>
-        ) : (
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#f4f4f2] border border-[#e6e5e3] text-xs font-mono text-[#484744]">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-[11px] font-medium">{metrics.activeCalls} Concurrent Calls Active</span>
-          </div>
-        )}
-
         {/* Primary Screen Trigger CTA */}
         {currentRoute === '/agents' ? (
           <Button
