@@ -1,4 +1,4 @@
-import type { HunarAgent, CreateAgentPayload, HunarAgentListResponse, HunarJob, CreateJobPayload, JobCandidateRecord, CallInitiationResult } from '../types';
+import type { HunarAgent, CreateAgentPayload, HunarAgentListResponse, HunarJob, CreateJobPayload, JobCandidateRecord, AddCandidatePayload, ScrapeJobResponse, CallInitiationResult } from '../types';
 
 /**
  * Client for the Hunar voice-agent API.
@@ -70,6 +70,31 @@ export function createJob(payload: CreateJobPayload): Promise<HunarJob> {
 
 export function getJobCandidates(jobId: string): Promise<JobCandidateRecord[]> {
   return request<JobCandidateRecord[]>(`/jobs/${encodeURIComponent(jobId)}/candidates`);
+}
+
+/** Scrape matching people from Apollo/web sources for a job and save them as candidates. */
+export function scrapePeopleForJob(jobId: string, limit = 25): Promise<ScrapeJobResponse> {
+  return request<ScrapeJobResponse>(
+    `/people-search/${encodeURIComponent(jobId)}?limit=${limit}`,
+    { method: 'POST' }
+  );
+}
+
+export function addJobCandidate(jobId: string, payload: AddCandidatePayload): Promise<JobCandidateRecord> {
+  return request<JobCandidateRecord>(`/jobs/${encodeURIComponent(jobId)}/candidates`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ job_id: jobId, consent_status: 'pending', source: 'manual', ...payload }),
+  });
+}
+
+export function uploadCandidatesCsv(jobId: string, file: File): Promise<JobCandidateRecord[]> {
+  const form = new FormData();
+  form.append('file', file);
+  return request<JobCandidateRecord[]>(`/jobs/${encodeURIComponent(jobId)}/candidates/csv`, {
+    method: 'POST',
+    body: form,
+  });
 }
 
 export function initiateCandidateCall(candidateId: string): Promise<CallInitiationResult> {

@@ -160,9 +160,41 @@ export interface JobCandidateRecord {
   name: string;
   phone: string;
   email: string;
+  title?: string | null;
+  company?: string | null;
+  location?: string | null;
+  linkedin_url?: string | null;
+  profile_url?: string | null;
+  avatar_url?: string | null;
+  skills?: string[] | null;
   source: string;
   consent_status: string;
   created_at?: string;
+}
+
+export interface AddCandidatePayload {
+  name: string;
+  phone?: string;
+  email?: string;
+  title?: string;
+  company?: string;
+  location?: string;
+  linkedin_url?: string;
+  profile_url?: string;
+  avatar_url?: string;
+  skills?: string[];
+  source?: string;
+  consent_status?: string;
+}
+
+export interface ScrapeJobResponse {
+  status: string;
+  job_id: string;
+  job_title: string;
+  filters_applied?: Record<string, any>;
+  scraped_count: number;
+  saved_count: number;
+  candidates?: JobCandidateRecord[];
 }
 
 export interface CallInitiationResult {
