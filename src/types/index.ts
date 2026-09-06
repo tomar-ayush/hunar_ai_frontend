@@ -134,6 +134,7 @@ export interface HunarJob {
   id: string;
   title: string;
   jd_text: string;
+  agent_id?: string | null;
   target_seniority_level?: string | null;
   target_location?: string | null;
   experience_required?: string | null;
@@ -146,6 +147,7 @@ export interface HunarJob {
 export interface CreateJobPayload {
   title: string;
   jd_text: string;
+  agent_id?: string | null;
   target_seniority_level?: string | null;
   target_location?: string | null;
   experience_required?: string | null;

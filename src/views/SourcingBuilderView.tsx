@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   Sparkles, 
   Check, 
@@ -15,7 +15,7 @@ import {
   Scan,
   Database,
   AlertCircle,
-  Volume2
+  Bot
 } from 'lucide-react';
 import { useRecruiter } from '../context';
 import { createJob } from '../api/hunarClient';
@@ -25,7 +25,14 @@ import { Badge } from '../components/ui/Badge';
 import { mockJobDescriptionSample } from '../mock/mockData';
 
 export const SourcingBuilderView: React.FC = () => {
-  const { extractedParams, setExtractedParams, navigateTo, refreshJobs } = useRecruiter();
+  const { 
+    extractedParams, 
+    setExtractedParams, 
+    navigateTo, 
+    refreshJobs,
+    agents,
+    activeAgentForOutreachId
+  } = useRecruiter();
 
   // Multi-step workflow state: 1 = Input JD, 2 = AI Scanning Skeleton, 3 = Refinement & Create
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
@@ -34,9 +41,14 @@ export const SourcingBuilderView: React.FC = () => {
   const [isQueryRunning, setIsQueryRunning] = useState(false);
   const [scanningProgress, setScanningProgress] = useState(0);
   const [createError, setCreateError] = useState<string | null>(null);
-  const [callIntroduction, setCallIntroduction] = useState(
-    'Hi {callee_name}, I am calling from TalentAcq regarding your application for the role. Do you have a couple of minutes to talk?'
-  );
+  const [selectedAgentId, setSelectedAgentId] = useState<string>('');
+
+  // Effective selected agent id, defaulting to active agent or first available agent
+  const effectiveAgentId = selectedAgentId || activeAgentForOutreachId || agents[0]?.id || '';
+
+  const selectedAgent = useMemo(() => {
+    return agents.find(a => a.id === effectiveAgentId) || null;
+  }, [agents, effectiveAgentId]);
 
   // Suggested skills to add with 1-click
   const suggestedSkills = ['eBPF', 'Rust', 'Raft Consensus', 'Prometheus', 'CockroachDB', 'gRPC'];
@@ -83,11 +95,11 @@ export const SourcingBuilderView: React.FC = () => {
       const created = await createJob({
         title: extractedParams.targetJobTitle,
         jd_text: jobDescription,
+        agent_id: effectiveAgentId || null,
         target_seniority_level: extractedParams.seniorityLevel,
         target_location: extractedParams.locationPreference,
         experience_required: `${extractedParams.experienceMin}+ years`,
         required_skills: extractedParams.requiredSkills,
-        script: { introduction: callIntroduction },
         sourcing_mode: 'auto'
       });
       await refreshJobs();
@@ -360,24 +372,68 @@ export const SourcingBuilderView: React.FC = () => {
               />
             </div>
 
-            {/* Call Introduction Script */}
-            <div className="space-y-1.5 md:col-span-2">
+            {/* Assigned Voice Agent Selection */}
+            <div className="space-y-2 md:col-span-2">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-semibold text-[#2d2c2a] flex items-center gap-1.5">
-                  <Volume2 className="w-3.5 h-3.5 text-[#8c8b88]" />
-                  Call Introduction (opening line for the voice agent)
+                  <Bot className="w-3.5 h-3.5 text-[#4f46e5]" />
+                  Voice Agent (Hunar Agent ID)
                 </label>
-                <span className="text-[11px] text-[#8c8b88]">
-                  {'{callee_name}'} is replaced with the candidate's name
-                </span>
+                {selectedAgent && (
+                  <span className="text-[11px] text-[#8c8b88]">
+                    Persona: <span className="font-semibold text-[#121212]">{selectedAgent.persona_name || selectedAgent.voice_persona}</span> · {selectedAgent.language}
+                  </span>
+                )}
               </div>
-              <textarea
-                rows={2}
-                value={callIntroduction}
-                onChange={(e) => setCallIntroduction(e.target.value)}
-                placeholder="Hi {callee_name}, I am calling from TalentAcq regarding your application..."
-                className="w-full p-3 text-xs rounded-lg border border-[#e6e5e3] bg-white text-[#121212] placeholder-[#8c8b88] focus:outline-none focus:border-[#121212] transition-all leading-relaxed"
-              />
+              <select
+                value={effectiveAgentId}
+                onChange={(e) => setSelectedAgentId(e.target.value)}
+                className="w-full h-9 px-3 text-xs rounded-lg border border-[#e6e5e3] bg-white text-[#121212] focus:outline-none focus:border-[#121212] cursor-pointer"
+              >
+                <option value="">Select a voice agent...</option>
+                {agents.map((agent) => (
+                  <option key={agent.id} value={agent.id}>
+                    {agent.name} ({agent.persona_name || agent.voice_persona} · {agent.language})
+                  </option>
+                ))}
+              </select>
+
+              {selectedAgent ? (
+                <div className="p-3.5 rounded-xl bg-[#fbfbfa] border border-[#e6e5e3] text-xs space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-[#121212]">{selectedAgent.name}</span>
+                      <Badge variant="neutral" className="text-[10px] font-mono">{selectedAgent.voice_persona}</Badge>
+                      <Badge variant="neutral" className="text-[10px] font-mono">{selectedAgent.language}</Badge>
+                      {selectedAgent.status === 'ACTIVE' && (
+                        <span className="inline-flex items-center gap-1 text-[10px] text-emerald-600 font-medium">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                          Active
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[10px] font-mono text-[#8c8b88]">ID: {selectedAgent.id.slice(0, 8)}...</span>
+                  </div>
+
+                  {selectedAgent.objective && (
+                    <p className="text-[11px] text-[#5a5957] leading-relaxed">
+                      <span className="font-semibold text-[#2d2c2a]">Objective: </span>
+                      {selectedAgent.objective}
+                    </p>
+                  )}
+
+                  {selectedAgent.introduction && (
+                    <p className="text-[11px] text-[#8c8b88] italic leading-relaxed">
+                      <span className="not-italic font-semibold text-[#5a5957]">Opening line: </span>
+                      "{selectedAgent.introduction}"
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-[11px] text-[#8c8b88]">
+                  Select the Hunar AI voice agent that will conduct outreach phone calls for this job.
+                </p>
+              )}
             </div>
 
             {/* Experience Range Slider */}

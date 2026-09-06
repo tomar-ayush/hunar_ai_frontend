@@ -79,6 +79,14 @@ export function createJob(payload: CreateJobPayload): Promise<HunarJob> {
   });
 }
 
+export function updateJob(jobId: string, payload: Partial<CreateJobPayload>): Promise<HunarJob> {
+  return request<HunarJob>(`/jobs/${encodeURIComponent(jobId)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
 export function getJobCandidates(jobId: string): Promise<JobCandidateRecord[]> {
   return request<JobCandidateRecord[]>(`/jobs/${encodeURIComponent(jobId)}/candidates`);
 }

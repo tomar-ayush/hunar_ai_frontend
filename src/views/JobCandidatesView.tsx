@@ -18,6 +18,7 @@ import {
   Check,
   MapPin,
   ExternalLink,
+  Bot,
 } from 'lucide-react';
 import { useRecruiter } from '../context';
 import {
@@ -126,6 +127,11 @@ export const JobCandidatesView: React.FC = () => {
   };
 
   const job = useMemo(() => jobs.find(j => j.id === jobId), [jobs, jobId]);
+
+  const assignedAgent = useMemo(() => {
+    if (!job?.agent_id) return null;
+    return agents.find(a => a.id === job.agent_id) || null;
+  }, [job, agents]);
 
   const loadCandidates = async () => {
     if (!jobId) return;
@@ -415,14 +421,26 @@ export const JobCandidatesView: React.FC = () => {
             <div className="w-9 h-9 rounded-lg bg-[#f4f4f2] border border-[#e6e5e3] flex items-center justify-center shrink-0">
               <Briefcase className="w-4 h-4 text-[#121212]" />
             </div>
-            <div className="min-w-0 text-xs text-[#5a5957] space-y-1.5">
+            <div className="min-w-0 text-xs text-[#5a5957] space-y-1.5 flex-1">
               <p className="line-clamp-2 leading-relaxed">{job.jd_text}</p>
-              {job.script?.introduction && (
+              {assignedAgent ? (
+                <div className="flex items-center gap-2 text-[11px] text-[#2d2c2a]">
+                  <Bot className="w-3.5 h-3.5 text-[#4f46e5] shrink-0" />
+                  <span>
+                    Voice Agent: <span className="font-semibold text-[#121212]">{assignedAgent.name}</span> ({assignedAgent.persona_name || assignedAgent.voice_persona} · {assignedAgent.language})
+                  </span>
+                </div>
+              ) : job.agent_id ? (
+                <div className="flex items-center gap-2 text-[11px] text-[#8c8b88]">
+                  <Bot className="w-3.5 h-3.5 text-[#4f46e5] shrink-0" />
+                  <span>Voice Agent ID: {job.agent_id}</span>
+                </div>
+              ) : job.script?.introduction ? (
                 <p className="text-[11px] italic">
                   <span className="font-semibold text-[#2d2c2a] not-italic">Call intro: </span>
                   "{job.script.introduction}"
                 </p>
-              )}
+              ) : null}
               {callingIds.length > 0 && (
                 <p className="flex items-center gap-1.5 text-[#975a16] font-mono text-[11px]">
                   <Radio className="w-3 h-3 animate-pulse" />
@@ -761,7 +779,7 @@ export const JobCandidatesView: React.FC = () => {
           variant={confirmModal.variant}
           candidates={confirmModal.candidates}
           agents={agents}
-          defaultAgentId={activeAgentForOutreachId}
+          defaultAgentId={job?.agent_id || activeAgentForOutreachId}
           isCalling={isCallingModal}
           onConfirm={handleConfirmCall}
           onClose={() => {

@@ -315,6 +315,11 @@ export const InterviewAuditView: React.FC = () => {
     return agents.find(a => a.id === callDetails.agent_id) || null;
   }, [callDetails, agents]);
 
+  const parentJobAgent = useMemo(() => {
+    if (!parentJob?.agent_id) return null;
+    return agents.find(a => a.id === parentJob.agent_id) || null;
+  }, [parentJob, agents]);
+
   // Dynamically extract all questions and answers (can be 1 to 7+ questions)
   const extractedQAs = useMemo(() => {
     return extractQuestionsAndAnswers(callDetails?.result, matchedAgent?.result_schema);
@@ -767,12 +772,17 @@ export const InterviewAuditView: React.FC = () => {
                 <p className="text-xs text-[#6e6d69] line-clamp-3 leading-relaxed">
                   {parentJob.jd_text}
                 </p>
-                {parentJob.script?.introduction && (
+                {parentJobAgent ? (
+                  <div className="p-2.5 rounded-lg bg-[#fbfbfa] border border-[#e6e5e3] text-[11px] text-[#5a5957] flex items-center justify-between">
+                    <span className="font-semibold text-[#2d2c2a]">Voice Agent:</span>
+                    <span className="text-[#121212] font-medium">{parentJobAgent.name} ({parentJobAgent.persona_name || parentJobAgent.voice_persona} · {parentJobAgent.language})</span>
+                  </div>
+                ) : parentJob.script?.introduction ? (
                   <div className="p-2.5 rounded-lg bg-[#fbfbfa] border border-[#e6e5e3] text-[11px] italic text-[#5a5957]">
                     <span className="font-semibold text-[#2d2c2a] not-italic">Dialing intro: </span>
                     "{parentJob.script.introduction}"
                   </div>
-                )}
+                ) : null}
               </Card>
             )}
           </div>
@@ -863,7 +873,7 @@ export const InterviewAuditView: React.FC = () => {
                   ]
             }
             agents={agents}
-            defaultAgentId={activeAgentForOutreachId}
+            defaultAgentId={parentJob?.agent_id || activeAgentForOutreachId}
             isCalling={isCallingModal}
             onConfirm={handleConfirmSingleCall}
             onClose={() => setIsConfirmModalOpen(false)}

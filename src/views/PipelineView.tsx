@@ -8,6 +8,7 @@ import {
   Calendar,
   MapPin,
   Clock,
+  Bot,
 } from 'lucide-react';
 import { useRecruiter } from '../context';
 import { Card } from '../components/ui/Card';
@@ -35,7 +36,7 @@ const timeAgo = (iso?: string) => {
 };
 
 export const PipelineView: React.FC = () => {
-  const { jobs, jobsLoading, jobsError, refreshJobs, navigateTo } = useRecruiter();
+  const { jobs, jobsLoading, jobsError, refreshJobs, navigateTo, agents } = useRecruiter();
 
   return (
     <div className="space-y-6 pb-12">
@@ -150,6 +151,15 @@ export const PipelineView: React.FC = () => {
                       {job.sourcing_mode} sourcing
                     </Badge>
                   )}
+                  {job.agent_id && (() => {
+                    const agent = agents.find(a => a.id === job.agent_id);
+                    return (
+                      <Badge variant="neutral" className="text-[10px] font-mono flex items-center gap-1">
+                        <Bot className="w-2.5 h-2.5 text-[#4f46e5]" />
+                        {agent ? agent.name : `Agent: ${job.agent_id.slice(0, 8)}...`}
+                      </Badge>
+                    );
+                  })()}
                 </div>
 
                 <p className="text-xs text-[#5a5957] line-clamp-2 mt-1.5 leading-relaxed max-w-2xl">
