@@ -16,7 +16,9 @@ import {
 } from 'lucide-react';
 import { useRecruiter } from '../context';
 import type { HunarAgent, CreateAgentPayload } from '../types';
+import { useQueryClient } from '@tanstack/react-query';
 import { getAgent } from '../api/hunarClient';
+import { agentKeys } from '../queries/agents';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Card } from '../components/ui/Card';
@@ -24,6 +26,7 @@ import { AgentEditorModal } from '../components/agents/AgentEditorModal';
 import { AgentTestCallModal } from '../components/agents/AgentTestCallModal';
 
 export const VoiceAgentsView: React.FC = () => {
+  const queryClient = useQueryClient();
   const { 
     agents, 
     agentsTotalCount,
@@ -91,8 +94,11 @@ export const VoiceAgentsView: React.FC = () => {
     if (isFetchingAgent) return;
     setIsFetchingAgent(agent.id);
     try {
-      // The list endpoint omits prompts — hydrate from the detail endpoint
-      const detail = await getAgent(agent.id);
+      // The list endpoint omits prompts — hydrate from the detail endpoint via cache if available
+      const detail = await queryClient.fetchQuery({
+        queryKey: agentKeys.detail(agent.id),
+        queryFn: () => getAgent(agent.id),
+      });
       setAgentToEdit({ ...agent, ...detail });
       setIsEditorOpen(true);
     } catch (err) {
@@ -127,7 +133,10 @@ export const VoiceAgentsView: React.FC = () => {
   const handleDuplicateAgent = async (agent: HunarAgent) => {
     try {
       // Prompts live only on the detail endpoint — hydrate before copying
-      const detail = await getAgent(agent.id);
+      const detail = await queryClient.fetchQuery({
+        queryKey: agentKeys.detail(agent.id),
+        queryFn: () => getAgent(agent.id),
+      });
       const full: HunarAgent = { ...agent, ...detail };
       const duplicatedPayload: CreateAgentPayload = {
         name: `${full.name} (Copy)`,

@@ -18,7 +18,7 @@ import {
   Bot
 } from 'lucide-react';
 import { useRecruiter } from '../context';
-import { createJob } from '../api/hunarClient';
+import { useCreateJobMutation } from '../queries';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
@@ -29,10 +29,11 @@ export const SourcingBuilderView: React.FC = () => {
     extractedParams, 
     setExtractedParams, 
     navigateTo, 
-    refreshJobs,
-    agents,
+    agents, 
     activeAgentForOutreachId
   } = useRecruiter();
+
+  const createJobMutation = useCreateJobMutation();
 
   // Multi-step workflow state: 1 = Input JD, 2 = AI Scanning Skeleton, 3 = Refinement & Create
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
@@ -92,7 +93,7 @@ export const SourcingBuilderView: React.FC = () => {
     setIsQueryRunning(true);
     setCreateError(null);
     try {
-      const created = await createJob({
+      const created = await createJobMutation.mutateAsync({
         title: extractedParams.targetJobTitle,
         jd_text: jobDescription,
         agent_id: effectiveAgentId || null,
@@ -102,7 +103,6 @@ export const SourcingBuilderView: React.FC = () => {
         required_skills: extractedParams.requiredSkills,
         sourcing_mode: 'auto'
       });
-      await refreshJobs();
       navigateTo(`/pipeline/${created.id}`);
     } catch (err) {
       setCreateError(err instanceof Error ? err.message : 'Job creation failed');

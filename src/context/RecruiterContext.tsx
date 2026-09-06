@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import type { 
   Candidate, 
@@ -6,11 +6,10 @@ import type {
   ExtractedJobParameters,
   HunarAgent,
   CreateAgentPayload,
-  HunarJob,
   CallLogEntry
 } from '../types';
 import { mockCandidates, mockCampaignMetrics, mockExtractedParameters } from '../mock/mockData';
-import * as hunarApi from '../api/hunarClient';
+import { useJobsQuery, useInfiniteAgentsQuery, useCreateAgentMutation, useUpdateAgentMutation } from '../queries';
 import { RecruiterContext } from './RecruiterContextInstance';
 
 export const RecruiterProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -25,74 +24,61 @@ export const RecruiterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [activeCandidateId, setActiveCandidateIdState] = useState<string>('alex-johnson');
   const [isCallingSimulated, setIsCallingSimulated] = useState<boolean>(false);
 
-  // Hunar AI Voice Agents — live from the backend
-  const [agents, setAgents] = useState<HunarAgent[]>([]);
-  const [agentsTotalCount, setAgentsTotalCount] = useState<number>(0);
-  const [agentsLoading, setAgentsLoading] = useState<boolean>(true);
-  const [agentsError, setAgentsError] = useState<string | null>(null);
-  const [hasMoreAgents, setHasMoreAgents] = useState<boolean>(false);
+  // Hunar AI Voice Agents — live from the backend via TanStack Query
+  const {
+    data: agentsData,
+    isLoading: agentsQueryLoading,
+    error: agentsErrorObj,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    refetch: refetchAgentsQuery,
+  } = useInfiniteAgentsQuery(20);
+
+  const agents = useMemo(() => {
+    if (!agentsData?.pages) return [];
+    return agentsData.pages.flatMap(page => page.results);
+  }, [agentsData]);
+
+  const agentsTotalCount = agentsData?.pages[0]?.count ?? 0;
+  const agentsLoading = agentsQueryLoading || isFetchingNextPage;
+  const agentsError = agentsErrorObj
+    ? (agentsErrorObj instanceof Error ? agentsErrorObj.message : String(agentsErrorObj))
+    : null;
+  const hasMoreAgents = hasNextPage ?? false;
 
   const [activeAgentForOutreachId, setActiveAgentForOutreachId] = useState<string>('');
 
   const refreshAgents = useCallback(async () => {
-    setAgentsLoading(true);
-    setAgentsError(null);
-    try {
-      const res = await hunarApi.listAgents(1, 20);
-      setAgents(res.results);
-      setAgentsTotalCount(res.count);
-      setHasMoreAgents(Boolean(res.next) || res.results.length < res.count);
-      setActiveAgentForOutreachId(prev =>
-        prev && res.results.some(a => a.id === prev) ? prev : res.results[0]?.id || ''
-      );
-    } catch (err) {
-      setAgentsError(err instanceof Error ? err.message : 'Failed to load agents');
-    } finally {
-      setAgentsLoading(false);
-    }
-  }, []);
+    await refetchAgentsQuery();
+  }, [refetchAgentsQuery]);
 
   const loadMoreAgents = useCallback(async () => {
-    setAgentsLoading(true);
-    try {
-      const res = await hunarApi.listAgents(Math.ceil(agents.length / 20) + 1, 20);
-      setAgents(prev => {
-        const seen = new Set(prev.map(a => a.id));
-        return [...prev, ...res.results.filter(a => !seen.has(a.id))];
-      });
-      setAgentsTotalCount(res.count);
-      setHasMoreAgents(agents.length + res.results.length < res.count);
-    } catch (err) {
-      setAgentsError(err instanceof Error ? err.message : 'Failed to load agents');
-    } finally {
-      setAgentsLoading(false);
-    }
-  }, [agents.length]);
+    await fetchNextPage();
+  }, [fetchNextPage]);
 
+  // Set default active agent when agents load
   useEffect(() => {
-    refreshAgents();
-  }, [refreshAgents]);
+    if (agents.length > 0 && !agents.some(a => a.id === activeAgentForOutreachId)) {
+      setActiveAgentForOutreachId(agents[0].id);
+    }
+  }, [agents, activeAgentForOutreachId]);
 
-  // Jobs — live from the backend
-  const [jobs, setJobs] = useState<HunarJob[]>([]);
-  const [jobsLoading, setJobsLoading] = useState<boolean>(true);
-  const [jobsError, setJobsError] = useState<string | null>(null);
+  // Jobs — live from the backend via TanStack Query
+  const {
+    data: jobs = [],
+    isLoading: jobsLoading,
+    error: jobsErrorObj,
+    refetch: refetchJobsQuery,
+  } = useJobsQuery();
+
+  const jobsError = jobsErrorObj
+    ? (jobsErrorObj instanceof Error ? jobsErrorObj.message : String(jobsErrorObj))
+    : null;
 
   const refreshJobs = useCallback(async () => {
-    setJobsLoading(true);
-    setJobsError(null);
-    try {
-      setJobs(await hunarApi.listJobs());
-    } catch (err) {
-      setJobsError(err instanceof Error ? err.message : 'Failed to load jobs');
-    } finally {
-      setJobsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    refreshJobs();
-  }, [refreshJobs]);
+    await refetchJobsQuery();
+  }, [refetchJobsQuery]);
 
   // Call log — client-side record of placed calls (backend has no call-history endpoint)
   const [callLog, setCallLog] = useState<Record<string, CallLogEntry>>(() => {
@@ -175,17 +161,15 @@ export const RecruiterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setSelectedCandidateIds([]);
   };
 
+  const createAgentMutation = useCreateAgentMutation();
+  const updateAgentMutation = useUpdateAgentMutation();
+
   const createAgent = async (payload: CreateAgentPayload): Promise<HunarAgent> => {
-    const created = await hunarApi.createAgent(payload);
-    setAgents(prev => [created, ...prev]);
-    setAgentsTotalCount(prev => prev + 1);
-    return created;
+    return createAgentMutation.mutateAsync(payload);
   };
 
   const updateAgent = async (id: string, payload: CreateAgentPayload): Promise<HunarAgent> => {
-    const updated = await hunarApi.updateAgent(id, payload);
-    setAgents(prev => prev.map(agent => (agent.id === id ? { ...agent, ...updated } : agent)));
-    return updated;
+    return updateAgentMutation.mutateAsync({ id, payload });
   };
 
   const initiateVoiceOutreach = (idsToCall: string[], specificAgentId?: string) => {
@@ -204,16 +188,7 @@ export const RecruiterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       })
     );
 
-    // Increment agent call counts
-    if (selectedAgent) {
-      setAgents(prev =>
-        prev.map(a =>
-          a.id === selectedAgent.id
-            ? { ...a, total_calls: (a.total_calls || 0) + idsToCall.length }
-            : a
-        )
-      );
-    }
+    // Removed optimistic call count increment since it's now handled by the backend
 
     setMetrics(prev => ({
       ...prev,

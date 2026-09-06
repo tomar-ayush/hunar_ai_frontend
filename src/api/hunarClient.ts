@@ -71,6 +71,10 @@ export function listJobs(): Promise<HunarJob[]> {
   return request<HunarJob[]>('/jobs');
 }
 
+export function getJob(jobId: string): Promise<HunarJob> {
+  return request<HunarJob>(`/jobs/${encodeURIComponent(jobId)}`);
+}
+
 export function createJob(payload: CreateJobPayload): Promise<HunarJob> {
   return request<HunarJob>('/jobs', {
     method: 'POST',

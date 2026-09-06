@@ -11,6 +11,7 @@ import {
   Bot,
 } from 'lucide-react';
 import { useRecruiter } from '../context';
+import { useJobsQuery } from '../queries';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -36,7 +37,18 @@ const timeAgo = (iso?: string) => {
 };
 
 export const PipelineView: React.FC = () => {
-  const { jobs, jobsLoading, jobsError, refreshJobs, navigateTo, agents } = useRecruiter();
+  const { 
+    data: jobs = [], 
+    isLoading: jobsLoading, 
+    error: jobsErrorObj, 
+    refetch: refreshJobs,
+    isRefetching
+  } = useJobsQuery();
+  const { navigateTo, agents } = useRecruiter();
+
+  const jobsError = jobsErrorObj
+    ? (jobsErrorObj instanceof Error ? jobsErrorObj.message : String(jobsErrorObj))
+    : null;
 
   return (
     <div className="space-y-6 pb-12">
@@ -66,7 +78,7 @@ export const PipelineView: React.FC = () => {
           <Button
             variant="outline"
             size="sm"
-            leftIcon={<RefreshCw className={`w-3.5 h-3.5 ${jobsLoading ? 'animate-spin' : ''}`} />}
+            leftIcon={<RefreshCw className={`w-3.5 h-3.5 ${jobsLoading || isRefetching ? 'animate-spin' : ''}`} />}
             onClick={() => refreshJobs()}
           >
             Refresh

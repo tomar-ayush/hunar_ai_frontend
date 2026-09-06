@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   Search,
@@ -21,14 +21,15 @@ import {
   Bot,
 } from 'lucide-react';
 import { useRecruiter } from '../context';
-import {
-  getJobCandidates,
-  initiateCandidateCall,
-  scrapePeopleForJob,
-  addJobCandidate,
-  uploadCandidatesCsv,
-} from '../api/hunarClient';
 import type { JobCandidateRecord } from '../types';
+import { 
+  useJobQuery, 
+  useJobCandidatesQuery, 
+  useScrapeCandidatesMutation, 
+  useAddCandidateMutation, 
+  useUploadCandidatesCsvMutation, 
+  useInitiateCallMutation 
+} from '../queries';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -90,9 +91,14 @@ export const JobCandidatesView: React.FC = () => {
     callLog 
   } = useRecruiter();
 
-  const [candidates, setCandidates] = useState<JobCandidateRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data: candidates = [], isLoading: loading, error: candidatesErrorObj, refetch: refetchCandidates } = useJobCandidatesQuery(jobId);
+  const error = candidatesErrorObj ? (candidatesErrorObj instanceof Error ? candidatesErrorObj.message : String(candidatesErrorObj)) : null;
+
+  const scrapeMutation = useScrapeCandidatesMutation(jobId);
+  const addCandidateMutation = useAddCandidateMutation(jobId);
+  const uploadCsvMutation = useUploadCandidatesCsvMutation(jobId);
+  const callMutation = useInitiateCallMutation();
+
   const [callStates, setCallStates] = useState<Record<string, CallState>>({});
   const [callingIds, setCallingIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -109,60 +115,36 @@ export const JobCandidatesView: React.FC = () => {
 
   // Scraping state
   const [scrapeLimit, setScrapeLimit] = useState(5);
-  const [isScraping, setIsScraping] = useState(false);
 
   // Add candidate modal
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [form, setForm] = useState<AddCandidateForm>(emptyCandidateForm);
   const [formError, setFormError] = useState<string | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
 
   // CSV upload
   const csvInputRef = useRef<HTMLInputElement | null>(null);
-  const [isUploadingCsv, setIsUploadingCsv] = useState(false);
 
   const showToast = (text: string, error = false) => {
     setToast({ text, error });
     setTimeout(() => setToast(null), 4000);
   };
 
-  const job = useMemo(() => jobs.find(j => j.id === jobId), [jobs, jobId]);
+  const { data: jobFromQuery, isLoading: jobQueryLoading } = useJobQuery(jobId);
+  const job = useMemo(() => jobFromQuery || jobs.find(j => j.id === jobId), [jobFromQuery, jobs, jobId]);
 
   const assignedAgent = useMemo(() => {
     if (!job?.agent_id) return null;
     return agents.find(a => a.id === job.agent_id) || null;
   }, [job, agents]);
 
-  const loadCandidates = async () => {
-    if (!jobId) return;
-    setLoading(true);
-    setError(null);
-    try {
-      setCandidates(await getJobCandidates(jobId));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load candidates');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadCandidates();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [jobId]);
-
   // ── Scrape from Apollo ────────────────────────────────────────────
   const handleScrape = async () => {
-    if (!jobId || isScraping) return;
-    setIsScraping(true);
+    if (!jobId || scrapeMutation.isPending) return;
     try {
-      const res = await scrapePeopleForJob(jobId, scrapeLimit);
-      await loadCandidates();
+      const res = await scrapeMutation.mutateAsync({ limit: scrapeLimit });
       showToast(`Scraped ${res.scraped_count} people — ${res.saved_count} new candidates saved.`);
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Scraping failed', true);
-    } finally {
-      setIsScraping(false);
     }
   };
 
@@ -173,14 +155,13 @@ export const JobCandidatesView: React.FC = () => {
       setFormError('Candidate name is required.');
       return;
     }
-    setIsSaving(true);
     setFormError(null);
     try {
       const skills = form.skills
         .split(',')
         .map(s => s.trim())
         .filter(Boolean);
-      await addJobCandidate(jobId, {
+      await addCandidateMutation.mutateAsync({
         name: form.name.trim(),
         title: form.title.trim() || undefined,
         company: form.company.trim() || undefined,
@@ -193,27 +174,21 @@ export const JobCandidatesView: React.FC = () => {
       });
       setIsAddOpen(false);
       setForm(emptyCandidateForm);
-      await loadCandidates();
       showToast(`Candidate "${form.name.trim()}" added.`);
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Failed to add candidate');
-    } finally {
-      setIsSaving(false);
     }
   };
 
   // ── CSV upload ────────────────────────────────────────────────────
   const handleCsvUpload = async (file: File) => {
     if (!jobId) return;
-    setIsUploadingCsv(true);
     try {
-      await uploadCandidatesCsv(jobId, file);
-      await loadCandidates();
+      await uploadCsvMutation.mutateAsync(file);
       showToast(`Imported candidates from ${file.name}.`);
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'CSV import failed', true);
     } finally {
-      setIsUploadingCsv(false);
       if (csvInputRef.current) csvInputRef.current.value = '';
     }
   };
@@ -231,7 +206,8 @@ export const JobCandidatesView: React.FC = () => {
       setCallingIds(prev => [...prev, c.id]);
       markCallState(c.id, 'ringing');
       try {
-        await initiateCandidateCall(c.id, {
+        await callMutation.mutateAsync({
+          candidateId: c.id,
           agentId: opts.agentId,
           phoneNumber: isSingle ? opts.phoneNumber : undefined,
         });
@@ -327,7 +303,7 @@ export const JobCandidatesView: React.FC = () => {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-semibold tracking-tight text-[#121212] truncate max-w-xl">
-                {job?.title || (jobsLoading ? 'Loading job…' : 'Job candidates')}
+                {job?.title || (jobsLoading || jobQueryLoading ? 'Loading job…' : 'Job candidates')}
               </h1>
               <Badge variant="neutral" className="text-[11px] font-mono">
                 {candidates.length} scraped
@@ -356,7 +332,7 @@ export const JobCandidatesView: React.FC = () => {
               <Button
                 variant="indigo"
                 size="sm"
-                isLoading={isScraping}
+                isLoading={scrapeMutation.isPending}
                 loadingText="Scraping Apollo…"
                 leftIcon={<Sparkles className="w-3.5 h-3.5 text-white" />}
                 onClick={handleScrape}
@@ -394,7 +370,7 @@ export const JobCandidatesView: React.FC = () => {
             <Button
               variant="outline"
               size="sm"
-              isLoading={isUploadingCsv}
+              isLoading={uploadCsvMutation.isPending}
               loadingText="Importing…"
               leftIcon={<Upload className="w-3.5 h-3.5" />}
               onClick={() => csvInputRef.current?.click()}
@@ -406,7 +382,7 @@ export const JobCandidatesView: React.FC = () => {
               variant="ghost"
               size="sm"
               leftIcon={<RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />}
-              onClick={loadCandidates}
+              onClick={() => refetchCandidates()}
             >
               Refresh
             </Button>
@@ -472,7 +448,7 @@ export const JobCandidatesView: React.FC = () => {
           <AlertCircle className="w-10 h-10 text-red-400 mx-auto" />
           <h3 className="text-sm font-semibold text-[#121212]">Couldn't load scraped candidates</h3>
           <p className="text-xs text-[#8c8b88] max-w-sm mx-auto">{error}</p>
-          <Button variant="primary" size="sm" onClick={loadCandidates}>
+          <Button variant="primary" size="sm" onClick={() => refetchCandidates()}>
             Retry
           </Button>
         </div>
@@ -551,7 +527,7 @@ export const JobCandidatesView: React.FC = () => {
                           <Button
                             variant="indigo"
                             size="sm"
-                            isLoading={isScraping}
+                            isLoading={scrapeMutation.isPending}
                             leftIcon={<Sparkles className="w-3.5 h-3.5 text-white" />}
                             onClick={handleScrape}
                           >
@@ -928,7 +904,7 @@ export const JobCandidatesView: React.FC = () => {
               <Button
                 variant="primary"
                 size="sm"
-                isLoading={isSaving}
+                isLoading={addCandidateMutation.isPending}
                 leftIcon={<UserPlus className="w-3.5 h-3.5 text-white" />}
                 onClick={handleSaveCandidate}
               >

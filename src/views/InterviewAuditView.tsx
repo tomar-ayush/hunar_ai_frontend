@@ -25,14 +25,16 @@ import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { CallConfirmModal } from '../components/candidates/CallConfirmModal';
-import { getJobCandidates, initiateCandidateCall, getCandidateCallDetails } from '../api/hunarClient';
+import { useQueryClient } from '@tanstack/react-query';
+import { getJobCandidates } from '../api/hunarClient';
+import { candidateKeys } from '../queries/candidates';
+import { useCandidateCallDetailsQuery, useInitiateCallMutation } from '../queries';
 import { mockCandidates } from '../mock/mockData';
 import type { 
   CallTranscriptEntry, 
   JobCandidateRecord, 
   HunarJob,
   CandidateEvaluation,
-  CandidateCallDetails,
   Recommendation,
   JobSeekingIntent
 } from '../types';
@@ -147,6 +149,7 @@ const extractQuestionsAndAnswers = (
 };
 
 export const InterviewAuditView: React.FC = () => {
+  const queryClient = useQueryClient();
   const { candidateId: paramCandidateId } = useParams<{ candidateId: string }>();
   const { 
     activeCandidate: contextCandidate, 
@@ -176,13 +179,17 @@ export const InterviewAuditView: React.FC = () => {
   });
   const [resolvingApiCandidate, setResolvingApiCandidate] = useState<boolean>(!mockMatch && !candidateJobCache[candidateId]);
 
-  // Call Details state from backend /candidates/{id}/call-details
-  const [callDetails, setCallDetails] = useState<CandidateCallDetails | null>(null);
-  const [loadingCallDetails, setLoadingCallDetails] = useState<boolean>(!mockMatch);
-
   // Call confirm modal state for "Not Contacted" state
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [isCallingModal, setIsCallingModal] = useState(false);
+
+  // Fetch candidate call details from Hunar Voice API
+  const { data: callDetails = null, isLoading: loadingCallDetails } = useCandidateCallDetailsQuery(
+    candidateId,
+    { enabled: !mockMatch }
+  );
+
+  const callMutation = useInitiateCallMutation();
 
   // Audio Playback State & Ref
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -191,28 +198,6 @@ export const InterviewAuditView: React.FC = () => {
   const [audioDuration, setAudioDuration] = useState<number | null>(null);
   const [playbackSpeed, setPlaybackSpeed] = useState<1 | 1.25 | 1.5 | 2>(1);
 
-  // Fetch candidate call details from Hunar Voice API
-  useEffect(() => {
-    let isMounted = true;
-
-    getCandidateCallDetails(candidateId)
-      .then(details => {
-        if (isMounted) {
-          setCallDetails(details);
-          setLoadingCallDetails(false);
-        }
-      })
-      .catch(() => {
-        if (isMounted) {
-          setCallDetails(null);
-          setLoadingCallDetails(false);
-        }
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [candidateId]);
 
   // Resolve candidate from API jobs if not found in mockCandidates
   useEffect(() => {
@@ -226,7 +211,10 @@ export const InterviewAuditView: React.FC = () => {
       try {
         for (const job of jobs) {
           try {
-            const list = await getJobCandidates(job.id);
+            const list = await queryClient.fetchQuery({
+              queryKey: candidateKeys.listByJob(job.id),
+              queryFn: () => getJobCandidates(job.id),
+            });
             for (const c of list) {
               candidateJobCache[c.id] = { candidate: c, job };
             }
@@ -602,7 +590,8 @@ export const InterviewAuditView: React.FC = () => {
     setIsCallingModal(true);
     try {
       if (apiCandidate) {
-        await initiateCandidateCall(apiCandidate.id, {
+        await callMutation.mutateAsync({
+          candidateId: apiCandidate.id,
           agentId: opts.agentId,
           phoneNumber: opts.phoneNumber
         });
