@@ -5,12 +5,10 @@ import {
   CheckCircle2, 
   TrendingUp, 
   Sparkles, 
-  ArrowRight, 
   Clock, 
   Radio, 
   Layers, 
   ChevronRight,
-  Flame,
   ArrowUpRight
 } from 'lucide-react';
 import { useRecruiter } from '../context';
@@ -19,7 +17,7 @@ import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 
 export const DashboardView: React.FC = () => {
-  const { metrics, candidates, navigateTo, setActiveCandidateId } = useRecruiter();
+  const { metrics, navigateTo, setActiveCandidateId } = useRecruiter();
 
   const metricCards = [
     {
@@ -124,50 +122,6 @@ export const DashboardView: React.FC = () => {
             </Card>
           );
         })}
-      </div>
-
-      {/* Active Campaign Spotlight Bar */}
-      <div className="bg-[#121212] text-white rounded-xl p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 border border-[#262626]">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/10 text-white text-[10px] font-mono uppercase tracking-wider">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-              Active Autonomous Bot
-            </span>
-            <span className="text-xs text-white/60">Campaign ID: hunar-camp-9481</span>
-          </div>
-          <h2 className="text-base font-semibold text-white tracking-tight">
-            Lead Distributed Systems Engineer (Go / Kafka / Raft)
-          </h2>
-          <div className="flex flex-wrap items-center gap-2 pt-1">
-            <span className="text-xs text-white/70">Required skills:</span>
-            {['Go (Golang)', 'Kafka', 'Kubernetes', 'gRPC', 'Distributed Systems'].map((s) => (
-              <span
-                key={s}
-                className="text-[11px] px-2 py-0.5 rounded bg-white/10 text-white/90 font-mono"
-              >
-                {s}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3 shrink-0">
-          <button
-            onClick={() => navigateTo('/pipeline')}
-            className="text-xs px-3.5 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white font-medium transition-colors flex items-center gap-1.5 cursor-pointer"
-          >
-            <span>Review Jobs Pipeline</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={() => navigateTo('/candidate/alex-johnson')}
-            className="text-xs px-3.5 py-2 rounded-lg bg-white text-[#121212] hover:bg-white/90 font-medium transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-[#4f46e5]" />
-            <span>Audit Top Candidate</span>
-          </button>
-        </div>
       </div>
 
       {/* Middle Section: Funnel Chart & Recent Activity */}
@@ -377,116 +331,6 @@ export const DashboardView: React.FC = () => {
           </Card>
         </div>
       </div>
-
-      {/* Bottom Section: Top Sourced Candidates Ready for Voice Screening */}
-      <Card className="p-5">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <Flame className="w-4 h-4 text-[#d97706]" />
-              <h3 className="text-sm font-semibold text-[#121212] tracking-tight">
-                Top Sourced Candidates (Ready for Outreach)
-              </h3>
-            </div>
-            <p className="text-xs text-[#6e6d69] mt-0.5">
-              Simulated Apollo & PDL enrichments ranked by AI semantic fit.
-            </p>
-          </div>
-
-          <Button
-            size="sm"
-            variant="outline"
-            rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
-            onClick={() => navigateTo('/pipeline')}
-          >
-            Explore All Candidates ({candidates.length})
-          </Button>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {candidates.slice(0, 3).map((candidate) => (
-            <div
-              key={candidate.id}
-              onClick={() => {
-                setActiveCandidateId(candidate.id);
-              }}
-              className="p-4 rounded-xl border border-[#e6e5e3] hover:border-[#b0afa9] hover:bg-[#fafaf8] transition-all cursor-pointer group flex flex-col justify-between"
-            >
-              <div>
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <img
-                      src={candidate.avatarUrl}
-                      alt={candidate.name}
-                      className="w-10 h-10 rounded-full object-cover border border-[#e6e5e3]"
-                    />
-                    <div>
-                      <h4 className="text-xs font-semibold text-[#121212] group-hover:text-[#4f46e5] transition-colors">
-                        {candidate.name}
-                      </h4>
-                      <p className="text-[11px] text-[#6e6d69] leading-tight mt-0.5">
-                        {candidate.currentRole}
-                      </p>
-                      <span className="text-[10px] text-[#8c8b88] font-mono">
-                        {candidate.company}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col items-end">
-                    <span className="text-xs font-mono font-bold text-[#1b6b27] bg-[#edf7ee] px-2 py-0.5 rounded border border-[#d4ebd6]">
-                      {candidate.matchScore}%
-                    </span>
-                    <span className="text-[9px] text-[#8c8b88] font-mono mt-0.5">Fit Score</span>
-                  </div>
-                </div>
-
-                <div className="mt-3 flex flex-wrap gap-1.5">
-                  {candidate.skills.slice(0, 3).map((skill) => (
-                    <span
-                      key={skill}
-                      className="text-[10px] px-1.5 py-0.5 rounded bg-[#f4f4f2] text-[#484744] font-mono"
-                    >
-                      {skill}
-                    </span>
-                  ))}
-                  {candidate.skills.length > 3 && (
-                    <span className="text-[10px] px-1 py-0.5 text-[#8c8b88] font-mono">
-                      +{candidate.skills.length - 3}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <div className="mt-4 pt-3 border-t border-[#f0f0ee] flex items-center justify-between">
-                <Badge
-                  variant={
-                    candidate.callStatus === 'completed'
-                      ? 'success'
-                      : candidate.callStatus === 'ringing'
-                      ? 'warning'
-                      : 'neutral'
-                  }
-                  dot
-                  className="text-[10px]"
-                >
-                  {candidate.callStatus === 'completed'
-                    ? 'Screened'
-                    : candidate.callStatus === 'ringing'
-                    ? 'Call In Progress'
-                    : candidate.callStatus === 'queued'
-                    ? 'Queued'
-                    : 'Not Contacted'}
-                </Badge>
-
-                <span className="text-[11px] font-medium text-[#4f46e5] flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">
-                  View Audit <ChevronRight className="w-3 h-3" />
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </Card>
     </div>
   );
 };
