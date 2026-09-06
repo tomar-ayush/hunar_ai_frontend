@@ -36,12 +36,23 @@ export const SourcingBuilderView: React.FC = () => {
   const [createError, setCreateError] = useState<string | null>(null);
   const [selectedAgentId, setSelectedAgentId] = useState<string>('');
 
-  // Effective selected agent id, defaulting to active agent or first available agent
-  const effectiveAgentId = selectedAgentId || activeAgentForOutreachId || agents[0]?.id || '';
+  const DEFAULT_AGENT_ID = '160316a5-8aaa-43f6-ab48-eb8055818a2b';
+  const defaultAgent = useMemo(() => {
+    return (
+      agents.find(
+        a => a.id === DEFAULT_AGENT_ID ||
+             a.agent_code === 'FD199' ||
+             a.name.toLowerCase().includes('senior backend engineer')
+      ) || agents[0]
+    );
+  }, [agents]);
+
+  // Effective selected agent id, defaulting to active agent or default agent
+  const effectiveAgentId = selectedAgentId || activeAgentForOutreachId || defaultAgent?.id || '';
 
   const selectedAgent = useMemo(() => {
-    return agents.find(a => a.id === effectiveAgentId) || null;
-  }, [agents, effectiveAgentId]);
+    return agents.find(a => a.id === effectiveAgentId) || defaultAgent || null;
+  }, [agents, effectiveAgentId, defaultAgent]);
 
   // Suggested skills to add with 1-click
   const suggestedSkills = ['eBPF', 'Rust', 'Raft Consensus', 'Prometheus', 'CockroachDB', 'gRPC'];

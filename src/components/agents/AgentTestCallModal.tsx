@@ -163,8 +163,8 @@ export const AgentTestCallModal: React.FC<AgentTestCallModalProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-base font-semibold text-[#121212]">Hunar Voice Test Sandbox</h2>
-                <Badge variant="outline" className="font-mono text-[10px]">
-                  {agent.agent_code}
+                <Badge variant="outline" className="font-mono text-[10px] max-w-[200px] truncate">
+                  {agent.id}
                 </Badge>
               </div>
               <p className="text-xs text-[#8c8b88]">

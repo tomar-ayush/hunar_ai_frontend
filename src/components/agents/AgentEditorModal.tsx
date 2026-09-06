@@ -375,7 +375,7 @@ export const AgentEditorModal: React.FC<AgentEditorModalProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-base font-semibold text-[#121212]">
-                  {isEditing ? `Update Voice Agent (${initialAgent?.agent_code || initialAgent?.name})` : 'Create New Hunar AI Voice Agent'}
+                  {isEditing ? `Update Voice Agent (${initialAgent?.id || initialAgent?.agent_code || initialAgent?.name})` : 'Create New Hunar AI Voice Agent'}
                 </h2>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#edf4fe] text-[#1a56db] font-semibold border border-[#d4e4fc]">
                   API v1 Schema

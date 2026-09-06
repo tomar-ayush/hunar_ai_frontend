@@ -22,6 +22,7 @@ export const RecruiterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [metrics, setMetrics] = useState<CampaignMetrics>(mockCampaignMetrics);
   const [extractedParams, setExtractedParams] = useState<ExtractedJobParameters>(mockExtractedParameters);
   const [activeCandidateId, setActiveCandidateIdState] = useState<string>('alex-johnson');
+  const [activeCandidateName, setActiveCandidateName] = useState<string | undefined>();
   const [isCallingSimulated, setIsCallingSimulated] = useState<boolean>(false);
 
   // Hunar AI Voice Agents — live from the backend via TanStack Query
@@ -35,6 +36,9 @@ export const RecruiterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     refetch: refetchAgentsQuery,
   } = useInfiniteAgentsQuery(20);
 
+  const DEFAULT_AGENT_ID = '160316a5-8aaa-43f6-ab48-eb8055818a2b';
+  const DEFAULT_AGENT_CODE = 'FD199';
+
   const agents = useMemo(() => {
     if (!agentsData?.pages) return [];
     return agentsData.pages.flatMap(page => page.results);
@@ -47,7 +51,7 @@ export const RecruiterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     : null;
   const hasMoreAgents = hasNextPage ?? false;
 
-  const [activeAgentForOutreachId, setActiveAgentForOutreachId] = useState<string>('');
+  const [activeAgentForOutreachId, setActiveAgentForOutreachId] = useState<string>(DEFAULT_AGENT_ID);
 
   const refreshAgents = useCallback(async () => {
     await refetchAgentsQuery();
@@ -57,10 +61,18 @@ export const RecruiterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     await fetchNextPage();
   }, [fetchNextPage]);
 
+  const isTargetDefaultAgent = (a: HunarAgent) =>
+    a.id === DEFAULT_AGENT_ID ||
+    a.agent_code === DEFAULT_AGENT_CODE ||
+    a.name.toLowerCase().includes('senior backend engineer');
+
   // Set default active agent when agents load
   useEffect(() => {
-    if (agents.length > 0 && !agents.some(a => a.id === activeAgentForOutreachId)) {
-      setActiveAgentForOutreachId(agents[0].id);
+    if (agents.length > 0) {
+      const targetDefault = agents.find(isTargetDefaultAgent) || agents[0];
+      if (!activeAgentForOutreachId || !agents.some(a => a.id === activeAgentForOutreachId)) {
+        setActiveAgentForOutreachId(targetDefault.id);
+      }
     }
   }, [agents, activeAgentForOutreachId]);
 
@@ -230,6 +242,8 @@ export const RecruiterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         extractedParams,
         setExtractedParams,
         activeCandidate,
+        activeCandidateName,
+        setActiveCandidateName,
         setActiveCandidateId,
         isCallingSimulated,
         agents,

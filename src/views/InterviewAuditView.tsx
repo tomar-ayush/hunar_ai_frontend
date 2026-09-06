@@ -18,7 +18,8 @@ import {
   Radio,
   Briefcase,
   MapPin,
-  Check
+  Check,
+  RefreshCw
 } from 'lucide-react';
 import { useRecruiter } from '../context';
 import { Card } from '../components/ui/Card';
@@ -160,7 +161,8 @@ export const InterviewAuditView: React.FC = () => {
     callLog,
     markCallsPlaced,
     agents,
-    activeAgentForOutreachId
+    activeAgentForOutreachId,
+    setActiveCandidateName
   } = useRecruiter();
 
   const candidateId = paramCandidateId || contextCandidate?.id || 'alex-johnson';
@@ -246,21 +248,51 @@ export const InterviewAuditView: React.FC = () => {
   // Unified candidate representation
   const isMock = Boolean(mockMatch);
   const candidateLog = callLog[candidateId];
-  const isRinging = candidateLog?.status === 'ringing' || callDetails?.status === 'INITIATED' || callDetails?.status === 'RINGING' || callDetails?.status === 'IN_PROGRESS' || callDetails?.status === 'QUEUED';
-  const isCalled = Boolean(candidateLog) || 
-    (isMock && mockMatch?.callStatus === 'completed') || 
-    Boolean(callDetails && (callDetails.status === 'COMPLETED' || callDetails.recording_url || callDetails.result));
+
+  // Backend call status is the source of truth when a call record exists.
+  // SCHEDULED / INITIATED / RINGING / IN_PROGRESS / QUEUED => call is placed but
+  // NOT completed: no transcript, recording or evaluation may be shown yet.
+  const backendCallStatus = callDetails?.status?.toUpperCase() || null;
+  const isRinging = candidateLog?.status === 'ringing' ||
+    backendCallStatus === 'INITIATED' ||
+    backendCallStatus === 'RINGING' ||
+    backendCallStatus === 'IN_PROGRESS' ||
+    backendCallStatus === 'QUEUED';
+  const isScheduledPending = Boolean(
+    callDetails && backendCallStatus && backendCallStatus !== 'COMPLETED'
+  );
+
+  const isCalled = isMock
+    ? mockMatch?.callStatus === 'completed'
+    : callDetails
+      ? backendCallStatus === 'COMPLETED'
+      : candidateLog?.status === 'completed';
 
   // Fallback candidate object if resolution fails
   const fallbackCandidate = mockCandidates[0];
 
   // Resolved candidate details
-  const candidateName = 
+  const resolvedRealName = 
     callDetails?.callee_name ||
     callDetails?.custom_data?.candidate_name ||
     mockMatch?.name || 
-    apiCandidate?.name || 
-    fallbackCandidate.name;
+    apiCandidate?.name;
+
+  const candidateName = 
+    resolvedRealName || 
+    (resolvingApiCandidate || loadingCallDetails ? 'Loading...' : fallbackCandidate.name);
+
+  // Synchronize candidate name to the global breadcrumb header
+  useEffect(() => {
+    if (resolvedRealName) {
+      setActiveCandidateName(resolvedRealName);
+    } else if (resolvingApiCandidate || loadingCallDetails) {
+      setActiveCandidateName('Candidate');
+    }
+    return () => {
+      setActiveCandidateName(undefined);
+    };
+  }, [resolvedRealName, resolvingApiCandidate, loadingCallDetails, setActiveCandidateName]);
 
   const candidateTitle = 
     callDetails?.custom_data?.job_role ||
@@ -645,7 +677,7 @@ export const InterviewAuditView: React.FC = () => {
   // =========================================================================
   // STATE 1: NOT CONTACTED STATE
   // =========================================================================
-  if (!isCalled) {
+  if (!isCalled && !isScheduledPending) {
     return (
       <div className="space-y-6 pb-16">
         {/* Top Navigation & Breadcrumbs */}
@@ -840,6 +872,228 @@ export const InterviewAuditView: React.FC = () => {
         </div>
 
         {/* Confirmation Modal */}
+        {isConfirmModalOpen && (
+          <CallConfirmModal
+            variant="single"
+            candidates={
+              apiCandidate
+                ? [apiCandidate]
+                : [
+                    {
+                      id: candidateId,
+                      job_id: parentJob?.id || 'job-1',
+                      name: candidateName,
+                      title: candidateTitle,
+                      company: candidateCompany,
+                      email: candidateEmail,
+                      phone: candidatePhone,
+                      consent_status: 'pending',
+                      source: 'apollo',
+                      created_at: new Date().toISOString()
+                    }
+                  ]
+            }
+            agents={agents}
+            defaultAgentId={parentJob?.agent_id || activeAgentForOutreachId}
+            isCalling={isCallingModal}
+            onConfirm={handleConfirmSingleCall}
+            onClose={() => setIsConfirmModalOpen(false)}
+          />
+        )}
+      </div>
+    );
+  }
+
+  // =========================================================================
+  // STATE 1.5: CALL SCHEDULED / IN PROGRESS (no transcript or recording yet)
+  // =========================================================================
+  if (isScheduledPending) {
+    const statusLabel =
+      backendCallStatus === 'SCHEDULED'
+        ? 'Call Scheduled'
+        : isRinging
+        ? 'Call In Progress'
+        : `Call ${backendCallStatus}`;
+    const statusTone = isRinging ? 'warning' : 'info';
+
+    return (
+      <div className="space-y-6 pb-16">
+        {/* Top Navigation & Breadcrumbs */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleBack}
+              className="w-8 h-8 rounded-lg border border-[#e6e5e3] bg-white flex items-center justify-center text-[#5a5957] hover:text-[#121212] hover:bg-[#f9f9f8] transition-colors cursor-pointer"
+              title="Back to candidates"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl font-semibold tracking-tight text-[#121212]">
+                  {candidateName}
+                </h1>
+                <Badge variant={statusTone} dot className={`font-mono ${isRinging ? 'animate-pulse' : ''}`}>
+                  {statusLabel}
+                </Badge>
+              </div>
+              <p className="text-xs text-[#6e6d69] mt-0.5">
+                {[candidateTitle, candidateCompany].filter(Boolean).join(' at ')} · {parentJob ? `Target role: ${parentJob.title}` : 'Candidate Profile'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* Left: profile recap */}
+          <div className="lg:col-span-5 space-y-5">
+            <Card className="p-5 space-y-4">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3.5">
+                  {candidateAvatar ? (
+                    <img
+                      src={candidateAvatar}
+                      alt={candidateName}
+                      className="w-12 h-12 rounded-full object-cover border border-[#e6e5e3]"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-full bg-[#f4f4f2] border border-[#e6e5e3] flex items-center justify-center text-sm font-semibold text-[#5a5957]">
+                      {initialsOf(candidateName)}
+                    </div>
+                  )}
+                  <div>
+                    <h2 className="text-sm font-semibold text-[#121212]">{candidateName}</h2>
+                    <p className="text-xs text-[#6e6d69]">{[candidateTitle, candidateCompany].filter(Boolean).join(' · ')}</p>
+                    {candidateLocation && (
+                      <span className="text-[11px] text-[#8c8b88] flex items-center gap-1 mt-1">
+                        <MapPin className="w-3 h-3" />
+                        {candidateLocation}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <Badge variant="neutral" className="font-mono text-[10px]">
+                  {apiCandidate?.source || 'Sourced'}
+                </Badge>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 pt-3 border-t border-[#f0f0ee] text-xs">
+                <div>
+                  <span className="text-[11px] text-[#8c8b88] block">Email</span>
+                  <span className="text-[#2d2c2a] font-mono truncate block">{candidateEmail}</span>
+                </div>
+                <div>
+                  <span className="text-[11px] text-[#8c8b88] block">Phone</span>
+                  <span className="text-[#2d2c2a] font-mono">{candidatePhone || 'No phone saved'}</span>
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-[#f0f0ee] space-y-1.5">
+                <span className="text-[11px] font-semibold text-[#8c8b88] uppercase tracking-wider block">
+                  Matched Skills & Keywords
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {candidateSkills.map(skill => (
+                    <span
+                      key={skill}
+                      className="text-[10px] px-2 py-0.5 rounded bg-[#f4f4f2] text-[#484744] font-mono border border-[#e6e5e3]"
+                    >
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </Card>
+
+            {parentJob && (
+              <Card className="p-4 space-y-2">
+                <div className="flex items-center gap-2 text-xs font-semibold text-[#121212]">
+                  <Briefcase className="w-3.5 h-3.5 text-[#4f46e5]" />
+                  <span>Job Target: {parentJob.title}</span>
+                </div>
+                <p className="text-xs text-[#6e6d69] line-clamp-3 leading-relaxed">
+                  {parentJob.jd_text}
+                </p>
+              </Card>
+            )}
+          </div>
+
+          {/* Right: scheduled call status card — deliberately no transcript/recording */}
+          <div className="lg:col-span-7">
+            <Card className="p-8 space-y-6 text-center bg-white border border-[#e6e5e3] shadow-xs">
+              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mx-auto shadow-xs ${
+                isRinging
+                  ? 'bg-[#fef7ec] border border-[#fde4c0] text-[#d97706]'
+                  : 'bg-[#edf4fe] border border-[#d3e3fd] text-[#1a56db]'
+              }`}>
+                {isRinging ? <Radio className="w-7 h-7 animate-pulse" /> : <PhoneCall className="w-7 h-7" />}
+              </div>
+
+              <div className="max-w-md mx-auto space-y-2">
+                <h3 className="text-base font-semibold text-[#121212]">
+                  {isRinging
+                    ? 'The Hunar voice agent is dialing right now'
+                    : 'A call has been scheduled for this candidate'}
+                </h3>
+                <p className="text-xs text-[#6e6d69] leading-relaxed">
+                  {isRinging
+                    ? `The agent is connecting to ${candidateName}. The call recording, transcript and evaluation scorecard will appear here automatically once the call completes.`
+                    : `The Hunar voice agent will dial ${candidateName} on ${candidatePhone || 'their saved number'} shortly. The recording, transcript and scorecard unlock after the call completes.`}
+                </p>
+              </div>
+
+              {/* Call metadata from the backend */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-lg mx-auto text-left text-xs">
+                <div className="p-3 rounded-xl bg-[#fbfbfa] border border-[#e6e5e3] space-y-1">
+                  <span className="text-[10px] uppercase font-mono text-[#8c8b88] block">Status</span>
+                  <span className="text-[#121212] font-semibold font-mono">{backendCallStatus}</span>
+                </div>
+                <div className="p-3 rounded-xl bg-[#fbfbfa] border border-[#e6e5e3] space-y-1">
+                  <span className="text-[10px] uppercase font-mono text-[#8c8b88] block">Scheduled</span>
+                  <span className="text-[#121212] font-medium">
+                    {formatCalledAt(callDetails?.created_at)}
+                  </span>
+                </div>
+                <div className="p-3 rounded-xl bg-[#fbfbfa] border border-[#e6e5e3] space-y-1">
+                  <span className="text-[10px] uppercase font-mono text-[#8c8b88] block">Agent</span>
+                  <span className="text-[#121212] font-medium truncate block">
+                    {matchedAgent?.name || callDetails?.system_data?.persona_name || 'Hunar Voice Agent'}
+                  </span>
+                </div>
+              </div>
+
+              {isRinging && (
+                <div className="flex items-center justify-center gap-2 text-xs font-mono text-[#975a16]">
+                  <Radio className="w-3.5 h-3.5 animate-pulse" />
+                  <span>Connecting SIP trunk… this page updates when the call completes.</span>
+                </div>
+              )}
+
+              <div className="flex items-center justify-center gap-3 pt-2">
+                <Button
+                  variant="outline"
+                  size="md"
+                  leftIcon={<RefreshCw className="w-4 h-4" />}
+                  onClick={() => window.location.reload()}
+                >
+                  Refresh status
+                </Button>
+                {!isRinging && (
+                  <Button
+                    variant="primary"
+                    size="md"
+                    leftIcon={<PhoneCall className="w-4 h-4 fill-white text-white" />}
+                    onClick={() => setIsConfirmModalOpen(true)}
+                  >
+                    Trigger call now
+                  </Button>
+                )}
+              </div>
+            </Card>
+          </div>
+        </div>
+
+        {/* Confirmation Modal for re-triggering */}
         {isConfirmModalOpen && (
           <CallConfirmModal
             variant="single"

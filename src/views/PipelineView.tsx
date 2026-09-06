@@ -9,9 +9,11 @@ import {
   MapPin,
   Clock,
   Bot,
+  Trash2,
+  Loader2,
 } from 'lucide-react';
 import { useRecruiter } from '../context';
-import { useJobsQuery } from '../queries';
+import { useJobsQuery, useDeleteJobMutation } from '../queries';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -45,6 +47,25 @@ export const PipelineView: React.FC = () => {
     isRefetching
   } = useJobsQuery();
   const { navigateTo, agents } = useRecruiter();
+  const deleteJobMutation = useDeleteJobMutation();
+  const [deletingJobId, setDeletingJobId] = React.useState<string | null>(null);
+
+  const handleDeleteJob = async (e: React.MouseEvent, jobId: string, jobTitle: string) => {
+    e.stopPropagation();
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${jobTitle}"? This will also remove candidates and audit logs associated with this job.`
+    );
+    if (!confirmed) return;
+
+    setDeletingJobId(jobId);
+    try {
+      await deleteJobMutation.mutateAsync(jobId);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to delete job');
+    } finally {
+      setDeletingJobId(null);
+    }
+  };
 
   const jobsError = jobsErrorObj
     ? (jobsErrorObj instanceof Error ? jobsErrorObj.message : String(jobsErrorObj))
@@ -229,6 +250,20 @@ export const PipelineView: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={(e) => handleDeleteJob(e, job.id, job.title)}
+                disabled={deletingJobId === job.id}
+                className="p-2 rounded-lg text-[#8c8b88] hover:text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200 transition-colors cursor-pointer disabled:opacity-50"
+                title="Delete job"
+                aria-label={`Delete ${job.title}`}
+              >
+                {deletingJobId === job.id ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-red-600" />
+                ) : (
+                  <Trash2 className="w-4 h-4" />
+                )}
+              </button>
               <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#121212] text-white text-xs font-medium group-hover:bg-[#4f46e5] transition-colors">
                 View candidates
                 <ChevronRight className="w-3.5 h-3.5" />

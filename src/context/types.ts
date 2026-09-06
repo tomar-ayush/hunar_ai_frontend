@@ -21,6 +21,8 @@ export interface RecruiterContextType {
   extractedParams: ExtractedJobParameters;
   setExtractedParams: React.Dispatch<React.SetStateAction<ExtractedJobParameters>>;
   activeCandidate: Candidate | undefined;
+  activeCandidateName?: string;
+  setActiveCandidateName: (name: string | undefined) => void;
   setActiveCandidateId: (id: string) => void;
   isCallingSimulated: boolean;
 

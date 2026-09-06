@@ -4,7 +4,7 @@ import { useRecruiter } from '../../context';
 import { Button } from '../ui/Button';
 
 export const Header: React.FC = () => {
-  const { currentRoute, navigateTo, activeCandidate } = useRecruiter();
+  const { currentRoute, navigateTo, activeCandidateName } = useRecruiter();
 
   const getBreadcrumbs = () => {
     if (currentRoute === '/dashboard') {
@@ -41,7 +41,7 @@ export const Header: React.FC = () => {
       return [
         { label: 'Candidate CRM', path: '/pipeline' },
         { label: 'Call Audit & Scorecard', path: currentRoute },
-        { label: activeCandidate ? activeCandidate.name : 'Alex Johnson', path: currentRoute },
+        { label: activeCandidateName || 'Candidate', path: currentRoute },
       ];
     }
     return [{ label: 'Dashboard', path: '/dashboard' }];

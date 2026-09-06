@@ -66,7 +66,8 @@ export const VoiceAgentsView: React.FC = () => {
     return agents.filter(agent => {
       const matchesSearch =
         agent.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        agent.agent_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        agent.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (agent.agent_code && agent.agent_code.toLowerCase().includes(searchQuery.toLowerCase())) ||
         (agent.summary && agent.summary.toLowerCase().includes(searchQuery.toLowerCase())) ||
         agent.persona_name.toLowerCase().includes(searchQuery.toLowerCase());
 
@@ -122,7 +123,7 @@ export const VoiceAgentsView: React.FC = () => {
         showToast(`Agent "${payload.name}" updated.`);
       } else {
         const created = await createAgent(payload);
-        showToast(`Agent "${created.name}" created with code ${created.agent_code}.`);
+        showToast(`Agent "${created.name}" created with ID ${created.id || created.agent_code}.`);
       }
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Save failed', true);
@@ -408,12 +409,15 @@ export const VoiceAgentsView: React.FC = () => {
                       </div>
 
                       <div>
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-semibold text-sm text-[#121212] group-hover/card:text-[#4f46e5] transition-colors">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <h3 className="font-semibold text-sm text-[#121212] group-hover/card:text-[#4f46e5] transition-colors truncate">
                             {agent.name}
                           </h3>
-                          <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-[#f4f4f2] text-[#5a5957] font-semibold border border-[#e6e5e3]">
-                            {agent.agent_code}
+                          <span
+                            className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-[#f4f4f2] text-[#5a5957] font-semibold border border-[#e6e5e3] max-w-[180px] truncate shrink-0"
+                            title={`Agent ID: ${agent.id}`}
+                          >
+                            {agent.id}
                           </span>
                         </div>
 

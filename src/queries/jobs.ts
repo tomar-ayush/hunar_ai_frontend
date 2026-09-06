@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { listJobs, getJob, createJob, updateJob } from '../api/hunarClient';
+import { listJobs, getJob, createJob, updateJob, deleteJob } from '../api/hunarClient';
 import type { HunarJob, CreateJobPayload } from '../types';
 
 /**
@@ -65,6 +65,21 @@ export function useUpdateJobMutation() {
     onSuccess: (updatedJob, { id }) => {
       queryClient.invalidateQueries({ queryKey: jobKeys.lists() });
       queryClient.setQueryData(jobKeys.detail(id), updatedJob);
+    },
+  });
+}
+
+/**
+ * Mutation hook to delete a job and invalidate jobs list cache
+ */
+export function useDeleteJobMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation<void, Error, string>({
+    mutationFn: (id: string) => deleteJob(id),
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: jobKeys.lists() });
+      queryClient.removeQueries({ queryKey: jobKeys.detail(id) });
     },
   });
 }

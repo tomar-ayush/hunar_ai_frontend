@@ -40,7 +40,18 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     }
     throw new Error(`Hunar API error ${res.status}${detail}`);
   }
-  return res.json() as Promise<T>;
+  if (res.status === 204) {
+    return undefined as unknown as T;
+  }
+  const text = await res.text();
+  if (!text) {
+    return undefined as unknown as T;
+  }
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    return undefined as unknown as T;
+  }
 }
 
 export function listAgents(page = 1, pageSize = 20): Promise<HunarAgentListResponse> {
@@ -88,6 +99,12 @@ export function updateJob(jobId: string, payload: Partial<CreateJobPayload>): Pr
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
+  });
+}
+
+export function deleteJob(jobId: string): Promise<void> {
+  return request<void>(`/jobs/${encodeURIComponent(jobId)}`, {
+    method: 'DELETE',
   });
 }
 

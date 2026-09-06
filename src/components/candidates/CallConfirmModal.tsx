@@ -8,7 +8,7 @@ interface CallConfirmModalProps {
   variant: 'single' | 'bulk';
   /** Candidates being called (single = length 1) */
   candidates: JobCandidateRecord[];
-  agents: { id: string; name: string; persona_name: string }[];
+  agents: { id: string; name: string; persona_name: string; agent_code?: string }[];
   defaultAgentId: string;
   isCalling?: boolean;
   onConfirm: (opts: { agentId: string; phoneNumber?: string }) => void;
@@ -30,7 +30,18 @@ export const CallConfirmModal: React.FC<CallConfirmModalProps> = ({
 }) => {
   const candidate = candidates[0];
   const [phoneNumber, setPhoneNumber] = useState(candidate?.phone || '');
-  const [agentId, setAgentId] = useState(defaultAgentId || agents[0]?.id || '');
+  
+  const DEFAULT_AGENT_ID = '160316a5-8aaa-43f6-ab48-eb8055818a2b';
+  const defaultAgent =
+    agents.find(
+      a => a.id === DEFAULT_AGENT_ID ||
+           a.agent_code === 'FD199' ||
+           a.name.toLowerCase().includes('senior backend engineer')
+    ) ||
+    agents.find(a => a.id === defaultAgentId) ||
+    agents[0];
+
+  const [agentId, setAgentId] = useState(defaultAgent?.id || DEFAULT_AGENT_ID);
   const [error, setError] = useState<string | null>(null);
 
   const isSingle = variant === 'single';
