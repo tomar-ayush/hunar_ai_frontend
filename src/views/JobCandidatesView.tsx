@@ -272,6 +272,8 @@ export const JobCandidatesView: React.FC = () => {
     if (callLog[id]) {
       return callLog[id].status === 'ringing' ? 'ringing' : 'completed';
     }
+    const cand = candidates.find(c => c.id === id);
+    if (cand?.call_id) return 'completed';
     return 'not_contacted';
   };
 

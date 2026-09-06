@@ -169,7 +169,69 @@ export interface JobCandidateRecord {
   skills?: string[] | null;
   source: string;
   consent_status: string;
+  call_id?: string | null;
   created_at?: string;
+}
+
+export interface CandidateCallResult {
+  candidate_summary?: string;
+  summary?: string;
+  screening_summary?: string;
+  suitability_score?: string | number;
+  fit_score?: string | number;
+  overall_recommendation?: string;
+  recommended_next_step?: string;
+  notice_period?: string;
+  availability?: string;
+  [key: string]: any;
+}
+
+export interface CandidateCallCustomData {
+  company?: string;
+  job_role?: string;
+  candidate_name?: string;
+  [key: string]: any;
+}
+
+export interface CandidateCallSystemData {
+  greeting?: string;
+  callee_name?: string;
+  current_time?: string;
+  persona_name?: string;
+  mobile_number?: string;
+  [key: string]: any;
+}
+
+export interface CandidateCallDetails {
+  id: string;
+  callee_name?: string;
+  mobile_number?: string;
+  agent_id?: string;
+  language?: string;
+  campaign_id?: string | null;
+  status: string;
+  lifecycle_status?: string;
+  custom_data?: CandidateCallCustomData;
+  system_data?: CandidateCallSystemData;
+  duration_minutes?: number;
+  duration_seconds?: number;
+  user_speech_duration?: number;
+  engagement_status?: string;
+  answered_by?: string;
+  call_ended_by?: string;
+  recording_url?: string;
+  result?: CandidateCallResult;
+  created_at?: string;
+  updated_at?: string;
+  started_at?: string;
+  ended_at?: string;
+  triggered_by?: string | null;
+  from_phone_number?: string;
+  timezone?: string;
+  request_id?: string;
+  call_id?: string;
+  candidate_id?: string;
+  [key: string]: any;
 }
 
 export interface AddCandidatePayload {

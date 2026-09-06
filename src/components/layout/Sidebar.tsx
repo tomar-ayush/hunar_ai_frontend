@@ -1,9 +1,9 @@
 import React from 'react';
-import { LayoutDashboard, Sparkles, Users2, FileCheck2, Sparkle, Bot } from 'lucide-react';
+import { LayoutDashboard, Sparkles, Users2, Sparkle, Bot } from 'lucide-react';
 import { useRecruiter } from '../../context';
 
 export const Sidebar: React.FC = () => {
-  const { currentRoute, navigateTo, jobs, activeCandidate, agents, agentsTotalCount } = useRecruiter();
+  const { currentRoute, navigateTo, jobs, agents, agentsTotalCount } = useRecruiter();
 
   const navItems = [
     {
@@ -29,12 +29,6 @@ export const Sidebar: React.FC = () => {
       label: 'Voice Agents',
       icon: Bot,
       badge: `${agentsTotalCount || agents.length}`,
-    },
-    {
-      id: `/candidate/${activeCandidate?.id || 'alex-johnson'}`,
-      label: 'Interview Audit',
-      icon: FileCheck2,
-      badge: undefined,
     },
   ];
 
@@ -65,7 +59,7 @@ export const Sidebar: React.FC = () => {
           const Icon = item.icon;
           const isActive =
             currentRoute === item.id ||
-            (item.id.startsWith('/candidate') && currentRoute.startsWith('/candidate'));
+            (item.id === '/pipeline' && (currentRoute.startsWith('/pipeline') || currentRoute.startsWith('/candidate')));
 
           return (
             <button

@@ -1,4 +1,15 @@
-import type { HunarAgent, CreateAgentPayload, HunarAgentListResponse, HunarJob, CreateJobPayload, JobCandidateRecord, AddCandidatePayload, ScrapeJobResponse, CallInitiationResult } from '../types';
+import type { 
+  HunarAgent, 
+  CreateAgentPayload, 
+  HunarAgentListResponse, 
+  HunarJob, 
+  CreateJobPayload, 
+  JobCandidateRecord, 
+  AddCandidatePayload, 
+  ScrapeJobResponse, 
+  CallInitiationResult,
+  CandidateCallDetails
+} from '../types';
 
 /**
  * Client for the Hunar voice-agent API.
@@ -109,4 +120,8 @@ export function initiateCandidateCall(
       phone_number: opts?.phoneNumber ?? null
     }),
   });
+}
+
+export function getCandidateCallDetails(candidateId: string): Promise<CandidateCallDetails> {
+  return request<CandidateCallDetails>(`/candidates/${encodeURIComponent(candidateId)}/call-details`);
 }
