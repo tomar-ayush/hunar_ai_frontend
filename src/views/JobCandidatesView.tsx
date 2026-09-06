@@ -31,6 +31,7 @@ import type { JobCandidateRecord } from '../types';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
+import { CallConfirmModal } from '../components/candidates/CallConfirmModal';
 
 type CallState = 'not_contacted' | 'ringing' | 'completed' | 'failed';
 
@@ -78,7 +79,15 @@ const emptyCandidateForm: AddCandidateForm = {
 
 export const JobCandidatesView: React.FC = () => {
   const { jobId } = useParams<{ jobId: string }>();
-  const { jobs, jobsLoading, navigateTo } = useRecruiter();
+  const { 
+    jobs, 
+    jobsLoading, 
+    navigateTo, 
+    agents, 
+    activeAgentForOutreachId, 
+    markCallsPlaced, 
+    callLog 
+  } = useRecruiter();
 
   const [candidates, setCandidates] = useState<JobCandidateRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -87,6 +96,15 @@ export const JobCandidatesView: React.FC = () => {
   const [callingIds, setCallingIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [toast, setToast] = useState<{ text: string; error?: boolean } | null>(null);
+
+  // Selection & Call confirmation states
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [confirmModal, setConfirmModal] = useState<{
+    open: boolean;
+    variant: 'single' | 'bulk';
+    candidates: JobCandidateRecord[];
+  }>({ open: false, variant: 'single', candidates: [] });
+  const [isCallingModal, setIsCallingModal] = useState(false);
 
   // Scraping state
   const [scrapeLimit, setScrapeLimit] = useState(5);
@@ -198,22 +216,42 @@ export const JobCandidatesView: React.FC = () => {
   const markCallState = (id: string, state: CallState) =>
     setCallStates(prev => ({ ...prev, [id]: state }));
 
-  const handleDial = async (candidate: JobCandidateRecord) => {
-    if (callingIds.includes(candidate.id)) return;
-    setCallingIds(prev => [...prev, candidate.id]);
-    markCallState(candidate.id, 'ringing');
-    try {
-      await initiateCandidateCall(candidate.id);
-      // The webhook drives real completion; reflect a connected call locally
-      setTimeout(() => markCallState(candidate.id, 'completed'), 4000);
-    } catch (err) {
-      markCallState(candidate.id, 'failed');
-      setTimeout(() => {
-        setCallingIds(prev => prev.filter(id => id !== candidate.id));
-      }, 1500);
-    } finally {
-      setCallingIds(prev => prev.filter(id => id !== candidate.id));
+  const handleConfirmCall = async (opts: { agentId: string; phoneNumber?: string }) => {
+    setIsCallingModal(true);
+    const toCall = confirmModal.candidates;
+    const isSingle = confirmModal.variant === 'single';
+
+    for (const c of toCall) {
+      setCallingIds(prev => [...prev, c.id]);
+      markCallState(c.id, 'ringing');
+      try {
+        await initiateCandidateCall(c.id, {
+          agentId: opts.agentId,
+          phoneNumber: isSingle ? opts.phoneNumber : undefined,
+        });
+      } catch {
+        markCallState(c.id, 'failed');
+      } finally {
+        setCallingIds(prev => prev.filter(id => id !== c.id));
+      }
     }
+
+    const agent = agents.find(a => a.id === opts.agentId);
+    const agentName = agent?.persona_name || agent?.name || 'Hunar Voice Agent';
+    markCallsPlaced(toCall.map(c => c.id), agentName);
+
+    setTimeout(() => {
+      toCall.forEach(c => markCallState(c.id, 'completed'));
+    }, 4000);
+
+    setIsCallingModal(false);
+    setConfirmModal({ open: false, variant: 'single', candidates: [] });
+    setSelectedIds([]);
+    showToast(
+      isSingle
+        ? `Initiated call to ${toCall[0]?.name || 'candidate'}.`
+        : `Initiated calls to ${toCall.length} candidates.`
+    );
   };
 
   const filtered = useMemo(() => {
@@ -229,7 +267,13 @@ export const JobCandidatesView: React.FC = () => {
     );
   }, [candidates, searchQuery]);
 
-  const stateOf = (id: string): CallState => callStates[id] ?? 'not_contacted';
+  const stateOf = (id: string): CallState => {
+    if (callStates[id]) return callStates[id];
+    if (callLog[id]) {
+      return callLog[id].status === 'ringing' ? 'ringing' : 'completed';
+    }
+    return 'not_contacted';
+  };
 
   const statusBadge = (state: CallState) => {
     switch (state) {
@@ -434,6 +478,28 @@ export const JobCandidatesView: React.FC = () => {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-[#e6e5e3] bg-[#fbfbfa] text-[11px] font-semibold text-[#6e6d69] uppercase tracking-wider">
+                  <th className="py-3 px-4 w-10">
+                    <input
+                      type="checkbox"
+                      aria-label="Select all candidates"
+                      checked={filtered.length > 0 && filtered.every(c => selectedIds.includes(c.id))}
+                      ref={el => {
+                        if (el) {
+                          const someSelected = filtered.some(c => selectedIds.includes(c.id)) && !filtered.every(c => selectedIds.includes(c.id));
+                          el.indeterminate = someSelected;
+                        }
+                      }}
+                      onChange={e => {
+                        if (e.target.checked) {
+                          setSelectedIds(prev => Array.from(new Set([...prev, ...filtered.map(c => c.id)])));
+                        } else {
+                          const filteredIds = new Set(filtered.map(c => c.id));
+                          setSelectedIds(prev => prev.filter(id => !filteredIds.has(id)));
+                        }
+                      }}
+                      className="w-4 h-4 rounded border-[#e6e5e3] text-[#121212] accent-[#121212] cursor-pointer"
+                    />
+                  </th>
                   <th className="py-3 px-4">Candidate</th>
                   <th className="py-3 px-4">Skills</th>
                   <th className="py-3 px-4">Contact</th>
@@ -446,7 +512,7 @@ export const JobCandidatesView: React.FC = () => {
               <tbody className="divide-y divide-[#f0f0ee] text-xs">
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-14 text-center">
+                    <td colSpan={8} className="py-14 text-center">
                       <div className="space-y-3">
                         <Users className="w-8 h-8 text-[#8c8b88] mx-auto opacity-50" />
                         <div className="space-y-1">
@@ -480,6 +546,23 @@ export const JobCandidatesView: React.FC = () => {
                     const state = stateOf(candidate.id);
                     return (
                       <tr key={candidate.id} className="hover:bg-[#fcfcfa] transition-colors group">
+                        {/* Checkbox */}
+                        <td className="py-3.5 px-4 w-10">
+                          <input
+                            type="checkbox"
+                            aria-label={`Select ${candidate.name}`}
+                            checked={selectedIds.includes(candidate.id)}
+                            onChange={e => {
+                              if (e.target.checked) {
+                                setSelectedIds(prev => [...prev, candidate.id]);
+                              } else {
+                                setSelectedIds(prev => prev.filter(id => id !== candidate.id));
+                              }
+                            }}
+                            className="w-4 h-4 rounded border-[#e6e5e3] text-[#121212] accent-[#121212] cursor-pointer"
+                          />
+                        </td>
+
                         {/* Candidate */}
                         <td className="py-3.5 px-4">
                           <div className="flex items-center gap-3">
@@ -602,9 +685,15 @@ export const JobCandidatesView: React.FC = () => {
                               </button>
                             ) : (
                               <button
-                                onClick={() => handleDial(candidate)}
-                                disabled={callingIds.includes(candidate.id) || !candidate.phone}
-                                title={candidate.phone ? 'Dial with Hunar voice agent' : 'No phone number on this candidate'}
+                                onClick={() =>
+                                  setConfirmModal({
+                                    open: true,
+                                    variant: 'single',
+                                    candidates: [candidate],
+                                  })
+                                }
+                                disabled={callingIds.includes(candidate.id)}
+                                title="Dial with Hunar voice agent"
                                 className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-[#e6e5e3] bg-white text-[#2d2c2a] hover:bg-[#f4f4f2] font-medium text-xs transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                               >
                                 <PhoneCall className="w-3 h-3 text-[#4f46e5]" />
@@ -636,29 +725,49 @@ export const JobCandidatesView: React.FC = () => {
         </div>
       )}
 
-      {/* Floating bulk dial bar */}
-      {candidates.some(c => stateOf(c.id) === 'not_contacted' && c.phone) && !loading && (
+      {/* Selection floating bar */}
+      {selectedIds.length > 0 && !loading && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 animate-in slide-in-from-bottom-5 duration-200">
           <div className="bg-[#121212] text-white px-5 py-3 rounded-2xl shadow-2xl border border-[#2a2a2a] flex items-center gap-4">
-            <span className="text-xs text-white/80">
-              {candidates.filter(c => stateOf(c.id) === 'not_contacted' && c.phone).length} contactable candidates
+            <span className="text-xs text-white/80 font-medium">
+              {selectedIds.length} candidate{selectedIds.length > 1 ? 's' : ''} selected
             </span>
             <Button
               size="sm"
               variant="indigo"
               leftIcon={<PhoneCall className="w-3.5 h-3.5 fill-white text-white" />}
-              onClick={async () => {
-                const toCall = filtered.filter(c => stateOf(c.id) === 'not_contacted' && c.phone);
-                for (const c of toCall) {
-                  await handleDial(c);
-                }
+              onClick={() => {
+                const chosen = candidates.filter(c => selectedIds.includes(c.id));
+                setConfirmModal({ open: true, variant: 'bulk', candidates: chosen });
               }}
-              disabled={callingIds.length > 0}
             >
-              Auto-Dial Uncontacted
+              Call selected
             </Button>
+            <button
+              onClick={() => setSelectedIds([])}
+              className="text-xs text-[#8c8b88] hover:text-white transition-colors cursor-pointer"
+            >
+              Clear
+            </button>
           </div>
         </div>
+      )}
+
+      {/* Pre-Call Confirmation Modal */}
+      {confirmModal.open && (
+        <CallConfirmModal
+          variant={confirmModal.variant}
+          candidates={confirmModal.candidates}
+          agents={agents}
+          defaultAgentId={activeAgentForOutreachId}
+          isCalling={isCallingModal}
+          onConfirm={handleConfirmCall}
+          onClose={() => {
+            if (!isCallingModal) {
+              setConfirmModal({ open: false, variant: 'single', candidates: [] });
+            }
+          }}
+        />
       )}
 
       {/* Add Candidate Modal */}

@@ -6,7 +6,8 @@ import type {
   ExtractedJobParameters,
   HunarAgent,
   CreateAgentPayload,
-  HunarJob
+  HunarJob,
+  CallLogEntry
 } from '../types';
 import { mockCandidates, mockCampaignMetrics, mockExtractedParameters } from '../mock/mockData';
 import * as hunarApi from '../api/hunarClient';
@@ -92,6 +93,48 @@ export const RecruiterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   useEffect(() => {
     refreshJobs();
   }, [refreshJobs]);
+
+  // Call log — client-side record of placed calls (backend has no call-history endpoint)
+  const [callLog, setCallLog] = useState<Record<string, CallLogEntry>>(() => {
+    try {
+      const saved = localStorage.getItem('hunar_call_log');
+      if (saved) return JSON.parse(saved);
+    } catch {
+      // ignore
+    }
+    return {};
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('hunar_call_log', JSON.stringify(callLog));
+    } catch {
+      // ignore
+    }
+  }, [callLog]);
+
+  /** Record calls as placed: status flips ringing -> completed after a short simulated connect. */
+  const markCallsPlaced = useCallback((candidateIds: string[], agentName: string) => {
+    const now = new Date().toISOString();
+    setCallLog(prev => {
+      const next = { ...prev };
+      for (const id of candidateIds) {
+        next[id] = { status: 'ringing', calledAt: now, agentName };
+      }
+      return next;
+    });
+    setTimeout(() => {
+      setCallLog(prev => {
+        const next = { ...prev };
+        for (const id of candidateIds) {
+          if (next[id] && next[id].status === 'ringing') {
+            next[id] = { ...next[id], status: 'completed' };
+          }
+        }
+        return next;
+      });
+    }, 4000);
+  }, []);
 
   const navigateTo = (route: string) => {
     navigate(route);
@@ -228,7 +271,9 @@ export const RecruiterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         jobs,
         jobsLoading,
         jobsError,
-        refreshJobs
+        refreshJobs,
+        callLog,
+        markCallsPlaced
       }}
     >
       {children}

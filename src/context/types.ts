@@ -4,7 +4,8 @@ import type {
   ExtractedJobParameters,
   HunarAgent,
   CreateAgentPayload,
-  HunarJob
+  HunarJob,
+  CallLogEntry
 } from '../types';
 
 export interface RecruiterContextType {
@@ -41,4 +42,8 @@ export interface RecruiterContextType {
   jobsLoading: boolean;
   jobsError: string | null;
   refreshJobs: () => Promise<void>;
+
+  // Voice call bookkeeping (client-side; backend has no call-history API)
+  callLog: Record<string, CallLogEntry>;
+  markCallsPlaced: (candidateIds: string[], agentName: string) => void;
 }

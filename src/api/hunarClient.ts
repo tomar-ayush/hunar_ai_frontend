@@ -97,10 +97,16 @@ export function uploadCandidatesCsv(jobId: string, file: File): Promise<JobCandi
   });
 }
 
-export function initiateCandidateCall(candidateId: string): Promise<CallInitiationResult> {
+export function initiateCandidateCall(
+  candidateId: string,
+  opts?: { agentId?: string; phoneNumber?: string }
+): Promise<CallInitiationResult> {
   return request<CallInitiationResult>(`/candidates/${encodeURIComponent(candidateId)}/call`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({}),
+    body: JSON.stringify({
+      agent_id: opts?.agentId ?? null,
+      phone_number: opts?.phoneNumber ?? null
+    }),
   });
 }

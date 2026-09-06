@@ -201,6 +201,12 @@ export interface CallInitiationResult {
   [key: string]: any;
 }
 
+export interface CallLogEntry {
+  status: 'ringing' | 'completed' | 'failed';
+  calledAt: string;
+  agentName: string;
+}
+
 export interface HunarAgent {
   id: string;
   status: HunarAgentStatus;
